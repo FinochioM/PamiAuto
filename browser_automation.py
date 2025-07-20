@@ -54,11 +54,13 @@ class BrowserAutomation:
         self.log("info", "Haciendo clic en botón Ingresar")
         self.page.click('input[type="submit"][value="Ingresar"]')
         
-        self.log("info", "Formulario de login completado")
+        self.log("info", "Formulario de login completado, esperando...")
+        time.sleep(2)  # Esperar unos segundos para que se cargue la página
 
     def click_ome_button(self):
         self.log("info", "Esperando que aparezca el botón OME")
         self.page.wait_for_selector("#cup_ome", state="visible")
+        time.sleep(1)
         
         self.log("info", "Haciendo clic en botón OME")
         with self.page.context.expect_page() as new_page_info:
@@ -69,3 +71,14 @@ class BrowserAutomation:
         
         self.log("info", "Nueva página OME abierta correctamente")
         self.log("info", f"URL de nueva página: {self.new_page.url}")
+        time.sleep(2)  # Esperar unos segundos para que se cargue la página
+    
+    def click_panel_prestaciones(self):
+        self.log("info", "Esperando que aparezca el botón Panel de prestaciones")
+        self.new_page.wait_for_selector("a[href='transmision.php']", state="visible")
+        time.sleep(1)
+        
+        self.log("info", "Haciendo clic en Panel de prestaciones")
+        self.new_page.click("a[href='transmision.php']")
+        
+        self.log("info", "Navegación a Panel de prestaciones completada")
