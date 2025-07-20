@@ -45,7 +45,8 @@ class LoginGUI:
             self.automation = BrowserAutomation()
             self.automation.start_browser()
             self.automation.navigate_to_login()
-            self.status_label.config(text="Navegador abierto - Complete manualmente", fg="green")
+            self.automation.fill_login_form(self.username, self.password)
+            self.status_label.config(text="Login completado", fg="green")
         except Exception as e:
             messagebox.showerror("Error", f"Error al iniciar: {str(e)}")
             self.status_label.config(text="Error al iniciar", fg="red")

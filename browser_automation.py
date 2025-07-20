@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 from config import *
+import time
 
 class BrowserAutomation:
     def __init__(self):
@@ -20,3 +21,15 @@ class BrowserAutomation:
             self.browser.close()
         if hasattr(self, 'playwright'):
             self.playwright.stop()
+    
+    def fill_login_form(self, username, password):
+        # esperar unos segundos antes de avanzar
+        self.page.wait_for_selector("#usua_logeo", state = "visible")
+        time.sleep(1)
+
+        
+        self.page.fill("#usua_logeo", username)
+        
+        self.page.fill("#password", password)
+        
+        self.page.click('input[type="submit"][value="Ingresar"]')
