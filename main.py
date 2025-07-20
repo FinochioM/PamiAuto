@@ -1,7 +1,7 @@
 from gui import *
 
 def main():
-    app = LoginGUI()
+    app = PamiAutoGUI()
     app.run()
 
 if __name__ == "__main__":

@@ -31,6 +31,9 @@ class BrowserAutomation:
         self.log("info", "Página cargada correctamente")
 
     def close_browser(self):
+        if hasattr(self, 'new_page') and self.new_page:
+            self.log("info", "Cerrando página OME")
+            self.new_page.close()
         if self.browser:
             self.log("info", "Cerrando navegador")
             self.browser.close()
@@ -52,3 +55,17 @@ class BrowserAutomation:
         self.page.click('input[type="submit"][value="Ingresar"]')
         
         self.log("info", "Formulario de login completado")
+
+    def click_ome_button(self):
+        self.log("info", "Esperando que aparezca el botón OME")
+        self.page.wait_for_selector("#cup_ome", state="visible")
+        
+        self.log("info", "Haciendo clic en botón OME")
+        with self.page.context.expect_page() as new_page_info:
+            self.page.click("#cup_ome")
+        
+        self.new_page = new_page_info.value
+        self.new_page.set_default_timeout(BROWSER_TIMEOUT)
+        
+        self.log("info", "Nueva página OME abierta correctamente")
+        self.log("info", f"URL de nueva página: {self.new_page.url}")

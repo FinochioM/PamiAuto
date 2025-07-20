@@ -4,7 +4,7 @@ from browser_automation import BrowserAutomation
 from logger import AutomationLogger
 import threading
 
-class LoginGUI:
+class PamiAutoGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.username = ""
@@ -103,6 +103,13 @@ class LoginGUI:
             
             self.logger.info("Login completado exitosamente")
             self.status_label.config(text="Login completado", fg="green")
+
+            self.logger.info("Haciendo clic en botón OME")
+            self.status_label.config(text="Navegando a OME...", fg="orange")
+            self.automation.click_ome_button()
+
+            self.logger.info("Navegación a OME completada")
+            self.status_label.config(text="OME abierto correctamente", fg="green")
             
         except Exception as e:
             error_msg = f"Error en automatización: {str(e)}"
