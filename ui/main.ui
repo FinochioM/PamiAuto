@@ -27,7 +27,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../Downloads/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png</normaloff>../../../Downloads/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png</iconset>
+    <normaloff>cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png</normaloff>cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
@@ -96,7 +96,7 @@ QToolButton:pressed {
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>../../../Downloads/Bioimagenes2.png</pixmap>
+      <pixmap>Bioimagenes2.png</pixmap>
      </property>
      <property name="scaledContents">
       <bool>true</bool>

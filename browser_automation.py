@@ -161,8 +161,11 @@ class BrowserAutomation:
                 date_value = get_first_day_of_month()
                 self.log("info", f"NDO {ndo}: Ingresando fecha {date_value}")
                 self.new_page.wait_for_selector("input[name='f_turno_desde']", state="visible")
-                self.new_page.fill("input[name='f_turno_desde']", date_value)
-                self.log("info", f"NDO {ndo}: Fecha ingresada correctamente")
+                self.new_page.click("input[name='f_turno_desde']")  # Foco
+                self.new_page.fill("input[name='f_turno_desde']", "")  # Limpiar
+                self.new_page.type("input[name='f_turno_desde']", date_value, delay=100)
+                self.new_page.press("input[name='f_turno_desde']", "Enter")
+                self.log("info", f"NDO {ndo}: Fecha tipeada y confirmada correctamente")
 
                 # esperar un poco para que se actualice la pagina
                 self.log("info", f"NDO {ndo}: Esperando actualización de página")
