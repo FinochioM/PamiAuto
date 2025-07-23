@@ -1,16 +1,44 @@
 from playwright.sync_api import sync_playwright
 from config import *
 import time
+import os 
+from datetime import datetime
+
+class AutomationError(Exception):
+    pass
 
 class BrowserAutomation:
     def __init__(self, logger=None):
         self.browser = None
         self.page = None
+        self.new_page = None
         self.logger = logger
 
-    def log(self, level, message):
+    def log(self, level, message, screenshot_path=None):
         if self.logger:
-            getattr(self.logger, level)(message)
+            getattr(self.logger, level)(message, screenshot_path)
+
+    def take_screenshot(self, description="error"):
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{description}_{timestamp}.png"
+            filepath = os.path.join(SCREENSHOT_DIR, filename)
+            
+            current_page = self.new_page if self.new_page else self.page
+            if current_page:
+                current_page.screenshot(path=filepath)
+                return filepath
+        except Exception as e:
+            self.log("error", f"Failed to take screenshot: {str(e)}")
+        return None
+
+    def check_for_errors(self, page):
+        page_content = page.content().lower()
+        for error_indicator in ERROR_INDICATORS:
+            if error_indicator in page_content:
+                screenshot_path = self.take_screenshot("login_error")
+                self.log("error", f"Login failed: Found error indicator '{error_indicator}'", screenshot_path)
+                raise AutomationError(f"Login failed: {error_indicator}")
 
     def start_browser(self):
         self.log("info", "Iniciando Playwright")
@@ -55,7 +83,17 @@ class BrowserAutomation:
         self.page.click('input[type="submit"][value="Ingresar"]')
 
         self.log("info", "Formulario de login completado, esperando...")
-        time.sleep(2)  # Esperar unos segundos para que se cargue la página
+        time.sleep(3)
+        
+        self.check_for_errors(self.page)
+        
+        try:
+            self.page.wait_for_selector("#cup_ome", state="visible", timeout=5000)
+            self.log("info", "Login exitoso: Botón OME encontrado")
+        except:
+            screenshot_path = self.take_screenshot("login_timeout")
+            self.log("error", "Login falló: No se encontró el botón OME", screenshot_path)
+            raise AutomationError("Login failed: OME button not found")
 
     def click_ome_button(self):
         self.log("info", "Esperando que aparezca el botón OME")
@@ -71,14 +109,19 @@ class BrowserAutomation:
 
         self.log("info", "Nueva página OME abierta correctamente")
         self.log("info", f"URL de nueva página: {self.new_page.url}")
-        time.sleep(2)  # Esperar unos segundos para que se cargue la página
+        time.sleep(2)
 
     def click_panel_prestaciones(self):
         self.log("info", "Esperando que aparezca el botón Panel de prestaciones")
-        self.new_page.wait_for_selector("a[href='transmision.php']", state="visible")
-        time.sleep(1)
+        try:
+            self.new_page.wait_for_selector("a[href='transmision.php']", state="visible")
+            time.sleep(1)
 
-        self.log("info", "Haciendo clic en Panel de prestaciones")
-        self.new_page.click("a[href='transmision.php']")
+            self.log("info", "Haciendo clic en Panel de prestaciones")
+            self.new_page.click("a[href='transmision.php']")
 
-        self.log("info", "Navegación a Panel de prestaciones completada")
+            self.log("info", "Navegación a Panel de prestaciones completada")
+        except:
+            screenshot_path = self.take_screenshot("panel_error")
+            self.log("error", "Error navegando a Panel de prestaciones", screenshot_path)
+            raise AutomationError("Failed to navigate to Panel de prestaciones")

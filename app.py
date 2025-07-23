@@ -94,8 +94,11 @@ class MainWindow(QMainWindow):
             error_msg = f"Error en automatización: {str(e)}"
             self.logger.error(error_msg)
             self.worker_signals.error_occurred.emit(error_msg)
+            self.worker_signals.status_update.emit("Error en automatización", "red")
         
         finally:
+            if self.automation:
+                self.automation.close_browser()
             self.worker_signals.automation_finished.emit()
     
     def update_status(self, message, color):
