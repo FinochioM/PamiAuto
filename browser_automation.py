@@ -164,6 +164,24 @@ class BrowserAutomation:
                 self.new_page.fill("input[name='f_turno_desde']", date_value)
                 self.log("info", f"NDO {ndo}: Fecha ingresada correctamente")
 
+                # esperar un poco para que se actualice la pagina
+                self.log("info", f"NDO {ndo}: Esperando actualización de página")
+                time.sleep(3)
+
+                self.log("info", f"NDO {ndo}: Ingresando NDO en campo de afiliado")
+                self.new_page.wait_for_selector("input[name='n_afiliado']", state="visible")
+                self.new_page.fill("input[name='n_afiliado']", str(ndo))
+                self.log("info", f"NDO {ndo}: NDO ingresado correctamente")
+
+                # apretar en el botón Buscar
+                self.log("info", f"NDO {ndo}: Haciendo clic en botón Buscar")
+                self.new_page.wait_for_selector("input[name='buscar']", state="visible")
+                self.new_page.click("input[name='buscar']")
+                self.log("info", f"NDO {ndo}: Búsqueda iniciada correctamente")
+                
+                # esperar unos segundos para que se cargue la página de resultados
+                time.sleep(5)
+
                 self.log("info", f"NDO {ndo}: Procesado exitosamente")
                 processed_rows.append({
                     'NDO': ndo,
