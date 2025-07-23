@@ -3,6 +3,7 @@ from config import *
 import time
 import os 
 from datetime import datetime
+import pandas as pd
 
 class AutomationError(Exception):
     pass
@@ -13,6 +14,7 @@ class BrowserAutomation:
         self.page = None
         self.new_page = None
         self.logger = logger
+        self.excel_data = []
 
     def log(self, level, message, screenshot_path=None):
         if self.logger:
@@ -125,3 +127,21 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot("panel_error")
             self.log("error", "Error navegando a Panel de prestaciones", screenshot_path)
             raise AutomationError("Failed to navigate to Panel de prestaciones")
+        
+    def read_excel_data(self):
+        try:
+            self.log("info", f"Leyendo archivo Excel: {INPUT_EXCEL_FILE}")
+            df = pd.read_excel(INPUT_EXCEL_FILE)
+            self.excel_data = df.to_dict('records')
+            self.log("info", f"Se leyeron {len(self.excel_data)} registros del Excel")
+            return self.excel_data
+        except Exception as e:
+            self.log("error", f"Error leyendo archivo Excel: {str(e)}")
+            raise AutomationError(f"Failed to read Excel file: {str(e)}")
+        
+    def process_excel_data(self, excel_data):
+        self.log("info", "Procesando datos de Excel")
+
+        for index, row in enumerate(excel_data):
+            self.log("info", f"Procesando fila {index + 1}: {row}")
+            print(f"Linea {index + 1}: {row}")

@@ -67,6 +67,10 @@ class MainWindow(QMainWindow):
             self.logger.info("Creando instancia de BrowserAutomation")
             self.automation = BrowserAutomation(self.logger)
 
+            self.logger.info("Leyendo datos de Excel")
+            self.worker_signals.status_update.emit("Leyendo datos de Excel...", "orange")
+            excel_data = self.automation.read_excel_data()
+
             self.logger.info("Iniciando navegador")
             self.worker_signals.status_update.emit("Iniciando navegador...", "orange")
             self.automation.start_browser()
@@ -86,7 +90,10 @@ class MainWindow(QMainWindow):
             self.logger.info("Haciendo clic en Panel de prestaciones")
             self.worker_signals.status_update.emit("Navegando a Panel...", "orange")
             self.automation.click_panel_prestaciones()
-            
+
+            self.worker_signals.status_update.emit("Loopeando sobre el excel", "orange")
+            self.automation.process_excel_data(excel_data)
+
             self.logger.info("Automatización completada exitosamente")
             self.worker_signals.status_update.emit("Automatización completada", "green")
             
