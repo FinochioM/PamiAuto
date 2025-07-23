@@ -15,6 +15,8 @@ class BrowserAutomation:
         self.new_page = None
         self.logger = logger
         self.excel_data = []
+        self.processed_rows = []
+        self.failed_rows = []
 
     def log(self, level, message, screenshot_path=None):
         if self.logger:
@@ -141,7 +143,46 @@ class BrowserAutomation:
         
     def process_excel_data(self, excel_data):
         self.log("info", "Procesando datos de Excel")
+        processed_rows = []
+        failed_rows = []
 
         for index, row in enumerate(excel_data):
-            self.log("info", f"Procesando fila {index + 1}: {row}")
-            print(f"Linea {index + 1}: {row}")
+            ndo = row.get('NDO', f'Fila_{index + 1}')
+            self.log("info", f"Iniciando procesamiento de NDO: {ndo} (Fila {index + 1})")
+
+            try:
+                # seleccionar Nro. Documento del dropdown
+                self.log("info", f"NDO {ndo}: Seleccionando 'Nro. Documento' en dropdown 'Afiliado Por'")
+                self.new_page.wait_for_selector("select[name='tipo_afiliado']", state="visible")
+                self.new_page.select_option("select[name='tipo_afiliado']", value="2")
+                self.log("info", f"NDO {ndo}: Selección completada")
+
+                # ingresar primer dia del mes anterior en el campo 'Fecha turno desde'
+                date_value = get_first_day_of_month()
+                self.log("info", f"NDO {ndo}: Ingresando fecha {date_value}")
+                self.new_page.wait_for_selector("input[name='f_turno_desde']", state="visible")
+                self.new_page.fill("input[name='f_turno_desde']", date_value)
+                self.log("info", f"NDO {ndo}: Fecha ingresada correctamente")
+
+                self.log("info", f"NDO {ndo}: Procesado exitosamente")
+                processed_rows.append({
+                    'NDO': ndo,
+                    'Status': 'Procesado Exitosamente',
+                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+            except Exception as e:
+                screenshot_path = self.take_screenshot(f"error_ndo_{ndo}")
+                error_msg = f"NDO {ndo}: Error en procesamiento - {str(e)}"
+                self.log("error", error_msg, screenshot_path)
+
+                failed_rows.append({
+                    'NDO': ndo,
+                    'Status': 'Procesado Exitosamente',
+                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'Screenshot': screenshot_path if screenshot_path else 'No se pudo tomar screenshot'
+                })
+
+        self.processed_rows = processed_rows
+        self.failed_rows = failed_rows
+
+        self.log("info", f"Procesamiento completado. Exitosos: {len(processed_rows)}, Fallidos: {len(failed_rows)}")

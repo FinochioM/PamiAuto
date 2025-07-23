@@ -6,6 +6,8 @@ class AutomationLogger:
     def __init__(self, log_dir="logs", screenshot_dir="screenshots"):
         self.logs = []
         self.log_dir = log_dir
+        self.processed_rows = []
+        self.failed_rows = []
         self.screenshot_dir = screenshot_dir
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -42,16 +44,23 @@ class AutomationLogger:
     def warning(self, message, screenshot_path=None):
         self.log("WARNING", message, screenshot_path)
     
-    def save_to_excel(self):
-        if not self.logs:
-            return None
-        
+    def save_to_excel(self, processed_rows=None, failed_rows=None):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"automation_log_{timestamp}.xlsx"
         filepath = os.path.join(self.log_dir, filename)
         
-        df = pd.DataFrame(self.logs)
-        df.to_excel(filepath, index=False)
+        with pd.ExcelWriter(filepath) as writer:
+            if self.logs:
+                df_logs = pd.DataFrame(self.logs)
+                df_logs.to_excel(writer, sheet_name='Logs', index=False)
+            
+            if processed_rows:
+                df_processed = pd.DataFrame(processed_rows)
+                df_processed.to_excel(writer, sheet_name='Processed', index=False)
+    
+            if failed_rows:
+                df_failed = pd.DataFrame(failed_rows)
+                df_failed.to_excel(writer, sheet_name='Not_Processed', index=False)
         
         return filepath
     
