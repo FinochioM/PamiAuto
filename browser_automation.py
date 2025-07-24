@@ -148,6 +148,7 @@ class BrowserAutomation:
 
         for index, row in enumerate(excel_data):
             ndo = row.get('NDO', f'Fila_{index + 1}')
+            cod_excel = row.get('COD', '')
             self.log("info", f"Iniciando procesamiento de NDO: {ndo} (Fila {index + 1})")
 
             try:
@@ -185,21 +186,53 @@ class BrowserAutomation:
                 # extraer datos de la tabla
                 table_data = self.extract_table_data(ndo)
 
-                if table_data:
-                    self.log("info", f"NDO {ndo}: Procesado exitosamente con {len(table_data)} resultados")
-                    processed_rows.append({
-                        'NDO': ndo,
-                        'Status': f'Procesado exitosamente - {len(table_data)} resultados encontrados',
-                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'Resultados': len(table_data)
-                    })
-                else:
+                if not table_data:
                     self.log("warning", f"NDO {ndo}: Procesado pero sin resultados")
                     processed_rows.append({
                         'NDO': ndo,
                         'Status': 'Procesado pero sin resultados',
                         'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'Resultados': 0
+                    })
+                    continue
+
+                # verificar si coinciden los datos del excel con los de la tabla ('COD' en excel con 'Practica' en tabla)
+                self.log("info", f"NDO {ndo}: Buscando COD {cod_excel} en {len(table_data)} resultados de la tabla.")
+                cod_found = False
+                matching_row = None
+
+                for table_row in table_data:
+                    practica_full = table_row.get('practica', '')
+                    if ' - ' in practica_full:
+                        practica_code = practica_full.split(' - ')[0].strip()
+                    else:
+                        practica_code = practica_full.split()[0] if practica_full else ''
+                    
+                    self.log("info", f"NDO {ndo}: Comparando COD {cod_excel} con codigo de practica {practica_code}")
+
+                    if str(cod_excel) == str(practica_code):
+                        cod_found = True
+                        matching_row = table_row
+                        self.log("info", f"NDO {ndo}: COD {cod_excel} encontrado en la tabla.")
+                        break
+                
+                if cod_found:
+                    self.log("info", f"NDO {ndo}: Procesado exitosamente - COD encontrado")
+                    processed_rows.append({
+                        'NDO': ndo,
+                        'Status': f'Procesado exitosamente - COD {cod_excel} encontrado',
+                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'Resultados': len(table_data),
+                        'COD_Encontrado': cod_excel
+                    })
+                else:
+                    self.log("warning", f"NDO {ndo}: COD {cod_excel} no encontrado en ninguna fila de la tabla")
+                    failed_rows.append({
+                        'NDO': ndo,
+                        'Status': f'COD {cod_excel} no encontrado en la tabla',
+                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'COD_Buscado': cod_excel,
+                        'Resultados_Tabla': len(table_data)
                     })
             except Exception as e:
                 screenshot_path = self.take_screenshot(f"error_ndo_{ndo}")
