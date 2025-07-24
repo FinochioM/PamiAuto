@@ -182,15 +182,25 @@ class BrowserAutomation:
                 self.new_page.click("input[name='buscar']")
                 self.log("info", f"NDO {ndo}: Búsqueda iniciada correctamente")
                 
-                # esperar unos segundos para que se cargue la página de resultados
-                time.sleep(5)
+                # extraer datos de la tabla
+                table_data = self.extract_table_data(ndo)
 
-                self.log("info", f"NDO {ndo}: Procesado exitosamente")
-                processed_rows.append({
-                    'NDO': ndo,
-                    'Status': 'Procesado Exitosamente',
-                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                })
+                if table_data:
+                    self.log("info", f"NDO {ndo}: Procesado exitosamente con {len(table_data)} resultados")
+                    processed_rows.append({
+                        'NDO': ndo,
+                        'Status': f'Procesado exitosamente - {len(table_data)} resultados encontrados',
+                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'Resultados': len(table_data)
+                    })
+                else:
+                    self.log("warning", f"NDO {ndo}: Procesado pero sin resultados")
+                    processed_rows.append({
+                        'NDO': ndo,
+                        'Status': 'Procesado pero sin resultados',
+                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'Resultados': 0
+                    })
             except Exception as e:
                 screenshot_path = self.take_screenshot(f"error_ndo_{ndo}")
                 error_msg = f"NDO {ndo}: Error en procesamiento - {str(e)}"
@@ -198,8 +208,9 @@ class BrowserAutomation:
 
                 failed_rows.append({
                     'NDO': ndo,
-                    'Status': 'Procesado Exitosamente',
+                    'Status': 'Error al procesar NDO.',
                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'Error': str(e),
                     'Screenshot': screenshot_path if screenshot_path else 'No se pudo tomar screenshot'
                 })
 
@@ -207,3 +218,54 @@ class BrowserAutomation:
         self.failed_rows = failed_rows
 
         self.log("info", f"Procesamiento completado. Exitosos: {len(processed_rows)}, Fallidos: {len(failed_rows)}")
+
+    def extract_table_data(self, ndo):
+        try:
+            self.log("info", f"NDO {ndo}: Esperando que aparezca la tabla de resultados.")
+            self.new_page.wait_for_selector("table.bandeja-transmision", state="visible", timeout=10000)
+            time.sleep(2)
+            rows = self.new_page.query_selector_all("tbody#ordenes tr")
+
+            if not rows:
+                self.log("warning", f"NDO {ndo}: No se encontraron resultados en la tabla.")
+                return []
+
+            table_data = []
+            self.log("info", f"NDO {ndo}: Se encontraron {len(rows)} filas en la tabla.")
+
+            for index, row in enumerate(rows):
+                try:
+                    data_id = row.get_attribute("data-id")
+                    data_practica = row.get_attribute("data-practica")
+                    data_n_orden = row.get_attribute("data-n_orden")
+                    data_n_beneficio = row.get_attribute("data-n_beneficio")
+
+                    cells = row.query_selector_all("td")
+                    if len(cells) >= 7:
+                        row_data = {
+                            'data_id': data_id,
+                            'data_practica': data_practica,
+                            'data_n_orden': data_n_orden,
+                            'data_n_beneficio': data_n_beneficio,
+                            'nro_orden': cells[0].inner_text().strip(),
+                            'fecha_emision': cells[1].inner_text().strip(),
+                            'nro_beneficio': cells[2].inner_text().strip(),
+                            'apellido_nombre': cells[3].inner_text().strip(),
+                            'practica': cells[4].inner_text().strip(),
+                            'turno': cells[5].inner_text().strip(),
+                            'transmitida': cells[6].inner_text().strip()
+                        }
+                        table_data.append(row_data)
+                        self.log("info", f"NDO {ndo}: Fila {index + 1} extraída - Orden: {row_data['nro_orden']}")
+
+                except Exception as e:
+                    self.log("warning", f"NDO {ndo}: Error extrayendo fila {index + 1}: {str(e)}")
+                    continue
+                
+            self.log("info", f"NDO {ndo}: Extracción de tabla completada. {len(table_data)} filas procesadas")
+            return table_data
+
+        except Exception as e:
+            screenshot_path = self.take_screenshot(f"table_error_ndo_{ndo}")
+            self.log("error", f"NDO {ndo}: Error en extracción de tabla: {str(e)}", screenshot_path)
+            return []
