@@ -187,10 +187,10 @@ class BrowserAutomation:
                 table_data = self.extract_table_data(ndo)
 
                 if not table_data:
-                    self.log("warning", f"NDO {ndo}: Procesado pero sin resultados")
+                    self.log("warning", f"NDO {ndo}: No se encontraron datos en la tabla.")
                     processed_rows.append({
                         'NDO': ndo,
-                        'Status': 'Procesado pero sin resultados',
+                        'Status': 'No se encontraron datos en la tabla.',
                         'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'Resultados': 0
                     })
@@ -217,14 +217,44 @@ class BrowserAutomation:
                         break
                 
                 if cod_found:
-                    self.log("info", f"NDO {ndo}: Procesado exitosamente - COD encontrado")
-                    processed_rows.append({
-                        'NDO': ndo,
-                        'Status': f'Procesado exitosamente - COD {cod_excel} encontrado',
-                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'Resultados': len(table_data),
-                        'COD_Encontrado': cod_excel
-                    })
+                    self.log("info", f"NDO {ndo}: COD encontrado en la tabla.")
+                    
+                    button_status, error_screenshot = self.check_button_status(ndo, matching_row)
+                    
+                    if button_status == "processed":
+                        self.log("info", f"NDO {ndo}: Caso ya procesado - Marcando como completado.")
+                        processed_rows.append({
+                            'NDO': ndo,
+                            'Status': f'Ya estaba procesado - COD {cod_excel}',
+                            'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'Resultados': len(table_data),
+                            'COD_Encontrado': cod_excel,
+                            'Button_Status': 'Already processed'
+                        })
+                    elif button_status == "needs_upload":
+                        self.log("info", f"NDO {ndo}: Requiere carga de archivo - Procesando...")
+                        # agregar aca logica de carga de archivo.
+                        processed_rows.append({
+                            'NDO': ndo,
+                            'Status': f'Requiere carga de archivo - COD {cod_excel}',
+                            'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'Resultados': len(table_data),
+                            'COD_Encontrado': cod_excel,
+                            'Button_Status': 'Needs upload'
+                        })
+                    else:
+                        self.log("warning", f"NDO {ndo}: Estado del boton no pudo ser determinado.")
+                        failed_row_data = {
+                            'NDO': ndo,
+                            'Status': f'Error determinando el estado del boton - COD {cod_excel}',
+                            'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'COD_Buscado': cod_excel,
+                            'Resultados_Tabla': len(table_data),
+                            'Button_Status': button_status
+                        }
+                        if error_screenshot:
+                            failed_row_data['Screenshot'] = error_screenshot
+                        failed_rows.append(failed_row_data)
                 else:
                     self.log("warning", f"NDO {ndo}: COD {cod_excel} no encontrado en ninguna fila de la tabla")
                     failed_rows.append({
@@ -302,3 +332,39 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot(f"table_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error en extracción de tabla: {str(e)}", screenshot_path)
             return []
+        
+    def check_button_status(self, ndo, matching_row_data):
+        try:
+            self.log("info", f"NDO {ndo}: Verificando estado del boton")
+            
+            data_id = matching_row_data.get('data_id')
+            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            
+            button_selector = f"{row_selector} .boton-historial.fas.fa-check"
+
+            self.new_page.wait_for_selector(button_selector, state="visible", timeout=5000)
+            
+            button = self.new_page.query_selector(button_selector)
+            
+            if not button:
+                self.log("error", f"NDO {ndo}: No se encontro el boton de validacion.")
+                return "unknown", None
+            
+            classes = button.get_attribute("class")
+            
+            if "btn-success" in classes:
+                self.log("info", f"NDO {ndo}: Boton verde - Caso ya procesado.")
+                return "processed", None
+            elif "btn-primary" in classes:
+                self.log("info", f"NDO {ndo}: Boton azul - Requiere carga de archivo.")
+                return "needs_upload", None
+            else:
+                bg_color = self.new_page.evaluate("(elements) => window.getComputedStyle(element).backgroundColor", button)
+                self.log("info", f"NDO {ndo}: Color de fondo del boton: {bg_color}")
+                return "unknown", None
+                
+        except Exception as e:
+            screenshot_path = self.take_screenshot(f"button_check_error_ndo_{ndo}")
+            self.log("error", f"NDO {ndo}: Error verificando estado del boton: {str(e)}", screenshot_path)
+            return "error", screenshot_path
+                
