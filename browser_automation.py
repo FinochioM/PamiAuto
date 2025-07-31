@@ -465,7 +465,7 @@ class BrowserAutomation:
             self.log("error", f"NDO {ndo}: Error verificando estado del botón de carga: {str(e)}", screenshot_path)
             return "error", screenshot_path
             
-    def handle_file_upload_modal(self, ndo, matching_row_data):
+    def handle_file_upload_modal(self, ndo, matching_row_data, informe_url):
         try:
             downloaded_file_path = self.download_file(ndo, informe_url)
             if not downloaded_file_path:
@@ -557,8 +557,21 @@ class BrowserAutomation:
             
             self.log("info", f"NDO {ndo}: Cerrando modal")
             try:
-                self.new_page.click("button.btn-danger[data-dismiss='modal']")
-                self.log("info", f"NDO {ndo}: Modal cerrado exitosamente")
+                close_buttons = self.new_page.query_selector_all("button.btn-danger[data-dismiss='modal']")
+                
+                close_button_found = False
+                for button in close_buttons:
+                    button_text = button.inner_text().strip()
+                    if "Cerrar" in button_text:
+                        button.click()
+                        self.log("info", f"NDO {ndo}: Modal cerrado exitosamente con botón 'Cerrar'")
+                        close_button_found = True
+                        break
+                
+                if not close_button_found:
+                    self.new_page.press("body", "Escape")
+                    self.log("info", f"NDO {ndo}: Modal cerrado con Escape (botón Cerrar no encontrado)")
+                    
             except Exception as close_error:
                 self.log("warning", f"NDO {ndo}: Error cerrando modal: {str(close_error)}")
                 try:
@@ -566,10 +579,6 @@ class BrowserAutomation:
                     self.log("info", f"NDO {ndo}: Modal cerrado con Escape")
                 except:
                     self.log("warning", f"NDO {ndo}: No se pudo cerrar el modal")
-            
-            self.log("info", f"NDO {ndo}: Proceso de carga completado exitosamente")
-            return True
-            
         except Exception as e:
             screenshot_path = self.take_screenshot(f"upload_modal_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error procesando modal de carga: {str(e)}", screenshot_path)
