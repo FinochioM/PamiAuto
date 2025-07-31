@@ -462,13 +462,19 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Botón de carga presionado")
             
             self.log("info", f"NDO {ndo}: Esperando que aparezca el modal de carga")
-            self.new_page.wait_for_selector(".modal-dialog", state="visible", timeout=10000)
+            self.new_page.wait_for_selector("select[name='m_t_doc']", state="visible", timeout=10000)
             time.sleep(2)
             
-            self.log("info", f"NDO {ndo}: Buscando opción 'Informe/Resultados' en dropdown")
-            self.new_page.wait_for_selector("select[name='m_t_doc']", state="visible")
+            self.log("info", f"NDO {ndo}: Modal de carga detectado, obteniendo opciones del dropdown")
             
             options = self.new_page.query_selector_all("select[name='m_t_doc'] option")
+            
+            if not options:
+                self.log("error", f"NDO {ndo}: No se encontraron opciones en el dropdown")
+                screenshot_path = self.take_screenshot(f"no_options_ndo_{ndo}")
+                return False, screenshot_path
+            
+            self.log("info", f"NDO {ndo}: Se encontraron {len(options)} opciones")
             informe_option_value = None
             
             for option in options:
@@ -483,8 +489,10 @@ class BrowserAutomation:
             
             if not informe_option_value:
                 self.log("error", f"NDO {ndo}: No se encontró opción 'Informe/Resultados' en el dropdown")
-                return False, None
+                screenshot_path = self.take_screenshot(f"no_informe_option_ndo_{ndo}")
+                return False, screenshot_path
             
+            self.log("info", f"NDO {ndo}: Seleccionando opción con valor: '{informe_option_value}'")
             self.new_page.select_option("select[name='m_t_doc']", value=informe_option_value)
             self.log("info", f"NDO {ndo}: Opción 'Informe/Resultados' seleccionada")
             
