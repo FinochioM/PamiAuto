@@ -237,16 +237,33 @@ class BrowserAutomation:
                         
                         if upload_status == "needs_file_upload":
                             self.log("info", f"NDO {ndo}: Requiere subir archivo - Procesando...")
-                            # Aagregar aca logica para cargar archivo
-                            processed_rows.append({
-                                'NDO': ndo,
-                                'Status': f'Requiere subir archivo - COD {cod_excel}',
-                                'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                'Resultados': len(table_data),
-                                'COD_Encontrado': cod_excel,
-                                'Button_Status': 'Needs file upload',
-                                'Upload_Status': 'Needs upload'
-                            })
+                            
+                            upload_result = self.handle_file_upload_modal(ndo, matching_row)
+                            
+                            if upload_result is True:
+                                processed_rows.append({
+                                    'NDO': ndo,
+                                    'Status': f'Modal de carga procesado - COD {cod_excel}',
+                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'Resultados': len(table_data),
+                                    'COD_Encontrado': cod_excel,
+                                    'Button_Status': 'Upload modal processed',
+                                    'Upload_Status': 'Ready for file upload'
+                                })
+                            else:
+                                error_screenshot = upload_result[1] if isinstance(upload_result, tuple) else None
+                                failed_row_data = {
+                                    'NDO': ndo,
+                                    'Status': f'Error procesando modal de carga - COD {cod_excel}',
+                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'COD_Buscado': cod_excel,
+                                    'Resultados_Tabla': len(table_data),
+                                    'Button_Status': button_status,
+                                    'Upload_Status': 'Modal processing failed'
+                                }
+                                if error_screenshot:
+                                    failed_row_data['Screenshot'] = error_screenshot
+                                failed_rows.append(failed_row_data)
                         elif upload_status == "file_already_uploaded":
                             self.log("info", f"NDO {ndo}: Archivo ya subido - Marcando como completado.")
                             processed_rows.append({
@@ -432,3 +449,59 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot(f"upload_button_check_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error verificando estado del botón de carga: {str(e)}", screenshot_path)
             return "error", screenshot_path
+            
+    def handle_file_upload_modal(self, ndo, matching_row_data):
+        try:
+            self.log("info", f"NDO {ndo}: Haciendo clic en botón de carga")
+            
+            data_id = matching_row_data.get('data_id')
+            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            upload_button_selector = f"{row_selector} .boton-historial.fas.fa-upload"
+            
+            self.new_page.click(upload_button_selector)
+            self.log("info", f"NDO {ndo}: Botón de carga presionado")
+            
+            self.log("info", f"NDO {ndo}: Esperando que aparezca el modal de carga")
+            self.new_page.wait_for_selector(".modal-dialog", state="visible", timeout=10000)
+            time.sleep(2)
+            
+            self.log("info", f"NDO {ndo}: Buscando opción 'Informe/Resultados' en dropdown")
+            self.new_page.wait_for_selector("select[name='m_t_doc']", state="visible")
+            
+            options = self.new_page.query_selector_all("select[name='m_t_doc'] option")
+            informe_option_value = None
+            
+            for option in options:
+                option_text = option.inner_text()
+                option_value = option.get_attribute("value")
+                self.log("info", f"NDO {ndo}: Opción encontrada - Texto: '{option_text}', Valor: '{option_value}'")
+                
+                if "Informe/Resultados" in option_text:
+                    informe_option_value = option_value
+                    self.log("info", f"NDO {ndo}: Opción 'Informe/Resultados' encontrada con valor: '{option_value}'")
+                    break
+            
+            if not informe_option_value:
+                self.log("error", f"NDO {ndo}: No se encontró opción 'Informe/Resultados' en el dropdown")
+                return False, None
+            
+            self.new_page.select_option("select[name='m_t_doc']", value=informe_option_value)
+            self.log("info", f"NDO {ndo}: Opción 'Informe/Resultados' seleccionada")
+            
+            self.log("info", f"NDO {ndo}: Esperando que aparezca el campo de archivo")
+            self.new_page.wait_for_selector("input[name='m_doc']", state="visible", timeout=10000)
+            time.sleep(2)
+            
+            self.log("info", f"NDO {ndo}: Campo de archivo encontrado y listo para carga")
+            # Agregar logica de carga de archivos aca.
+            
+            self.log("info", f"NDO {ndo}: Cerrando modal")
+            self.new_page.click("button.btn-danger[data-dismiss='modal']")
+            
+            self.log("info", f"NDO {ndo}: Modal de carga procesado exitosamente")
+            return True
+            
+        except Exception as e:
+            screenshot_path = self.take_screenshot(f"upload_modal_error_ndo_{ndo}")
+            self.log("error", f"NDO {ndo}: Error procesando modal de carga: {str(e)}", screenshot_path)
+            return False, screenshot_path
