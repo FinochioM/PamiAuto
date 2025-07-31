@@ -531,12 +531,43 @@ class BrowserAutomation:
             file_chooser.set_files(downloaded_file_path)
             self.log("info", f"NDO {ndo}: Archivo seleccionado exitosamente")
             
-            time.sleep(2)
+            self.log("info", f"NDO {ndo}: Esperando confirmación de carga de archivo")
+            try:
+                self.new_page.wait_for_selector("tbody#documentosGrid tr", state="visible", timeout=15000)
+                
+                confirmation_rows = self.new_page.query_selector_all("tbody#documentosGrid tr")
+                if confirmation_rows and len(confirmation_rows) > 0:
+                    first_row = confirmation_rows[0]
+                    row_content = first_row.inner_text()
+                    self.log("info", f"NDO {ndo}: Confirmación de carga encontrada: {row_content}")
+                    
+                    if "Informe/Resultados" in row_content:
+                        self.log("info", f"NDO {ndo}: Archivo subido y confirmado exitosamente")
+                    else:
+                        self.log("warning", f"NDO {ndo}: Confirmación no contiene 'Informe/Resultados'")
+                else:
+                    self.log("error", f"NDO {ndo}: No se encontraron filas de confirmación")
+                    screenshot_path = self.take_screenshot(f"no_confirmation_ndo_{ndo}")
+                    return False, screenshot_path
+                    
+            except Exception as confirmation_error:
+                self.log("error", f"NDO {ndo}: Error esperando confirmación de carga: {str(confirmation_error)}")
+                screenshot_path = self.take_screenshot(f"upload_confirmation_error_ndo_{ndo}")
+                return False, screenshot_path
             
             self.log("info", f"NDO {ndo}: Cerrando modal")
-            self.new_page.click("button.btn-danger[data-dismiss='modal']")
+            try:
+                self.new_page.click("button.btn-danger[data-dismiss='modal']")
+                self.log("info", f"NDO {ndo}: Modal cerrado exitosamente")
+            except Exception as close_error:
+                self.log("warning", f"NDO {ndo}: Error cerrando modal: {str(close_error)}")
+                try:
+                    self.new_page.press("body", "Escape")
+                    self.log("info", f"NDO {ndo}: Modal cerrado con Escape")
+                except:
+                    self.log("warning", f"NDO {ndo}: No se pudo cerrar el modal")
             
-            self.log("info", f"NDO {ndo}: Modal de carga procesado exitosamente")
+            self.log("info", f"NDO {ndo}: Proceso de carga completado exitosamente")
             return True
             
         except Exception as e:
