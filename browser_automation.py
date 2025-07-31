@@ -4,6 +4,7 @@ import time
 import os 
 from datetime import datetime
 import pandas as pd
+import requests
 
 class AutomationError(Exception):
     pass
@@ -238,28 +239,42 @@ class BrowserAutomation:
                         if upload_status == "needs_file_upload":
                             self.log("info", f"NDO {ndo}: Requiere subir archivo - Procesando...")
                             
-                            upload_result = self.handle_file_upload_modal(ndo, matching_row)
+                            informe_url = row.get('Informe', '')
+                            if not informe_url:
+                                self.log("error", f"NDO {ndo}: No se encontró URL de informe en el Excel")
+                                failed_rows.append({
+                                    'NDO': ndo,
+                                    'Status': f'URL de informe no encontrada - COD {cod_excel}',
+                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'COD_Buscado': cod_excel,
+                                    'Resultados_Tabla': len(table_data),
+                                    'Button_Status': button_status,
+                                    'Upload_Status': 'No informe URL'
+                                })
+                                continue
+                                                    
+                            upload_result = self.handle_file_upload_modal(ndo, matching_row, informe_url)
                             
                             if upload_result is True:
                                 processed_rows.append({
                                     'NDO': ndo,
-                                    'Status': f'Modal de carga procesado - COD {cod_excel}',
+                                    'Status': f'Archivo subido exitosamente - COD {cod_excel}',
                                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     'Resultados': len(table_data),
                                     'COD_Encontrado': cod_excel,
-                                    'Button_Status': 'Upload modal processed',
-                                    'Upload_Status': 'Ready for file upload'
+                                    'Button_Status': 'File uploaded successfully',
+                                    'Upload_Status': 'Uploaded'
                                 })
                             else:
                                 error_screenshot = upload_result[1] if isinstance(upload_result, tuple) else None
                                 failed_row_data = {
                                     'NDO': ndo,
-                                    'Status': f'Error procesando modal de carga - COD {cod_excel}',
+                                    'Status': f'Error subiendo archivo - COD {cod_excel}',
                                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     'COD_Buscado': cod_excel,
                                     'Resultados_Tabla': len(table_data),
                                     'Button_Status': button_status,
-                                    'Upload_Status': 'Modal processing failed'
+                                    'Upload_Status': 'Upload failed'
                                 }
                                 if error_screenshot:
                                     failed_row_data['Screenshot'] = error_screenshot
@@ -452,6 +467,11 @@ class BrowserAutomation:
             
     def handle_file_upload_modal(self, ndo, matching_row_data):
         try:
+            downloaded_file_path = self.download_file(ndo, informe_url)
+            if not downloaded_file_path:
+                self.log("error", f"NDO {ndo}: No se pudo descargar el archivo")
+                return False, None
+            
             self.log("info", f"NDO {ndo}: Haciendo clic en botón de carga")
             
             data_id = matching_row_data.get('data_id')
@@ -500,8 +520,18 @@ class BrowserAutomation:
             self.new_page.wait_for_selector("input[name='m_doc']", state="visible", timeout=10000)
             time.sleep(2)
             
-            self.log("info", f"NDO {ndo}: Campo de archivo encontrado y listo para carga")
-            # Agregar logica de carga de archivos aca.
+            self.log("info", f"NDO {ndo}: Preparando carga del archivo descargado: {downloaded_file_path}")
+            
+            with self.new_page.expect_file_chooser() as fc_info:
+                self.log("info", f"NDO {ndo}: Haciendo clic en campo de archivo")
+                self.new_page.click("input[name='m_doc']")
+            
+            file_chooser = fc_info.value
+            self.log("info", f"NDO {ndo}: Seleccionando archivo en el diálogo")
+            file_chooser.set_files(downloaded_file_path)
+            self.log("info", f"NDO {ndo}: Archivo seleccionado exitosamente")
+            
+            time.sleep(2)
             
             self.log("info", f"NDO {ndo}: Cerrando modal")
             self.new_page.click("button.btn-danger[data-dismiss='modal']")
@@ -513,3 +543,26 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot(f"upload_modal_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error procesando modal de carga: {str(e)}", screenshot_path)
             return False, screenshot_path
+        
+    def download_file(self, ndo, informe_url):
+        try:
+            if not os.path.exists(DOWNLOADS_DIR):
+                os.makedirs(DOWNLOADS_DIR)
+                
+            self.log("info", f"NDO {ndo}: Descargando archivo desde: {informe_url}")
+            
+            response = requests.get(informe_url, timeout = 30)
+            response.raise_for_status()
+            
+            filename = f"informe_{ndo}.pdf"
+            filepath = os.path.join(DOWNLOADS_DIR, filename)
+            
+            with open(filepath, 'wb') as file:
+                file.write(response.content)
+                
+            self.log("info", f"NDO {ndo}: Archivo descargado exitosamente: {filepath}")
+            return filepath
+        
+        except Exception as e:
+            self.log("error", f"NDO {ndo}: Error descargando el archivo: {str(e)}")
+            return None
