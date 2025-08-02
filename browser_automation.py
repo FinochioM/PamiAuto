@@ -255,7 +255,37 @@ class BrowserAutomation:
                                                     
                             upload_result = self.handle_file_upload_modal(ndo, matching_row, informe_url)
                             
+                            self.log("info", f"NDO {ndo}: Upload result: {upload_result}")
+                            self.log("info", f"NDO {ndo}: Upload result type: {type(upload_result)}")
+                            
                             if upload_result is True:
+                                self.log("info", f"NDO {ndo}: Archivo subido exitosamente - Verificando para transmitir")
+                                transmit_result, transmit_error_screenshot = self.check_and_transmit(ndo, matching_row)
+                                
+                                if transmit_result:
+                                    processed_rows.append({
+                                        'NDO': ndo,
+                                        'Status': f'Archivo subido y transmitido exitosamente - COD {cod_excel}',
+                                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                        'Resultados': len(table_data),
+                                        'COD_Encontrado': cod_excel,
+                                        'Button_Status': 'File uploaded and transmitted',
+                                        'Upload_Status': 'Completed'
+                                    })
+                                else:
+                                    failed_row_data = {
+                                        'NDO': ndo,
+                                        'Status': f'Archivo subido pero no se pudo transmitir - COD {cod_excel}',
+                                        'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                        'COD_Buscado': cod_excel,
+                                        'Resultados_Tabla': len(table_data),
+                                        'Button_Status': button_status,
+                                        'Upload_Status': 'Upload successful, transmit failed'
+                                    }
+                                    if transmit_error_screenshot:
+                                        failed_row_data['Screenshot'] = transmit_error_screenshot
+                                    failed_rows.append(failed_row_data)
+                                
                                 processed_rows.append({
                                     'NDO': ndo,
                                     'Status': f'Archivo subido exitosamente - COD {cod_excel}',
@@ -266,6 +296,7 @@ class BrowserAutomation:
                                     'Upload_Status': 'Uploaded'
                                 })
                             else:
+                                self.log("error", f"NDO {ndo}: Upload result no es True: {upload_result}")
                                 error_screenshot = upload_result[1] if isinstance(upload_result, tuple) else None
                                 failed_row_data = {
                                     'NDO': ndo,
@@ -280,16 +311,31 @@ class BrowserAutomation:
                                     failed_row_data['Screenshot'] = error_screenshot
                                 failed_rows.append(failed_row_data)
                         elif upload_status == "file_already_uploaded":
-                            self.log("info", f"NDO {ndo}: Archivo ya subido - Marcando como completado.")
-                            processed_rows.append({
-                                'NDO': ndo,
-                                'Status': f'Archivo ya subido - COD {cod_excel}',
-                                'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                'Resultados': len(table_data),
-                                'COD_Encontrado': cod_excel,
-                                'Button_Status': 'File already uploaded',
-                                'Upload_Status': 'Already uploaded'
-                            })
+                            self.log("info", f"NDO {ndo}: Archivo ya subido - Trasmitiendo.")
+                            transmit_result, transmit_error_screenshot = self.check_and_transmit(ndo, matching_row)
+                            if transmit_result:
+                                processed_rows.append({
+                                    'NDO': ndo,
+                                    'Status': f'Archivo ya subido y transmitido - COD {cod_excel}',
+                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'Resultados': len(table_data),
+                                    'COD_Encontrado': cod_excel,
+                                    'Button_Status': 'File already uploaded and transmitted',
+                                    'Upload_Status': 'Already uploaded and completed'
+                                })
+                            else:
+                                failed_row_data = {
+                                    'NDO': ndo,
+                                    'Status': f'Archivo ya subido pero no se pudo transmitir - COD {cod_excel}',
+                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    'COD_Buscado': cod_excel,
+                                    'Resultados_Tabla': len(table_data),
+                                    'Button_Status': button_status,
+                                    'Upload_Status': 'Already uploaded, transmit failed'
+                                }
+                                if transmit_error_screenshot:
+                                    failed_row_data['Screenshot'] = transmit_error_screenshot
+                                failed_rows.append(failed_row_data)
                         else:
                             self.log("warning", f"NDO {ndo}: Estado del botón de carga no pudo ser determinado.")
                             failed_row_data = {
@@ -584,6 +630,8 @@ class BrowserAutomation:
             self.log("error", f"NDO {ndo}: Error procesando modal de carga: {str(e)}", screenshot_path)
             return False, screenshot_path
         
+        return True, None
+        
     def download_file(self, ndo, informe_url):
         try:
             if not os.path.exists(DOWNLOADS_DIR):
@@ -606,3 +654,56 @@ class BrowserAutomation:
         except Exception as e:
             self.log("error", f"NDO {ndo}: Error descargando el archivo: {str(e)}")
             return None
+        
+    def check_and_transmit(self, ndo, matching_row_data):
+        try:
+            self.log("info", f"NDO {ndo}: Verificando estado de ambos botones antes de transmitir")
+            
+            data_id = matching_row_data.get('data_id')
+            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            
+            time.sleep(3)
+            
+            check_button_selector = f"{row_selector} .boton-historial.fas.fa-check"
+            check_button = self.new_page.query_selector(check_button_selector)
+            
+            if not check_button:
+                self.log("error", f"NDO {ndo}: No se encontró el botón de validación")
+                return False, None
+            
+            check_classes = check_button.get_attribute("class")
+            check_is_blue = "btn-primary" in check_classes
+            
+            upload_button_selector = f"{row_selector} .boton-historial.fas.fa-upload"
+            upload_button = self.new_page.query_selector(upload_button_selector)
+            
+            if not upload_button:
+                self.log("error", f"NDO {ndo}: No se encontró el botón de carga")
+                return False, None
+            
+            upload_classes = upload_button.get_attribute("class")
+            upload_is_blue = "btn-primary" in upload_classes
+            
+            self.log("info", f"NDO {ndo}: Estado botones - Validación: {'azul' if check_is_blue else 'otro'}, Carga: {'azul' if upload_is_blue else 'otro'}")
+            
+            if check_is_blue and upload_is_blue:
+                self.log("info", f"NDO {ndo}: Ambos botones están azules - Procediendo a transmitir")
+                
+                transmit_button_selector = f"{row_selector} .boton-historial.fas.fa-arrow-right.transmitir"
+                
+                self.new_page.wait_for_selector(transmit_button_selector, state="visible", timeout=5000)
+                self.new_page.click(transmit_button_selector)
+                
+                self.log("info", f"NDO {ndo}: Botón transmitir presionado exitosamente")
+                
+                time.sleep(2)
+                
+                return True, None
+            else:
+                self.log("warning", f"NDO {ndo}: No se puede transmitir - Botones no están en estado correcto")
+                return False, None
+                
+        except Exception as e:
+            screenshot_path = self.take_screenshot(f"transmit_error_ndo_{ndo}")
+            self.log("error", f"NDO {ndo}: Error verificando/transmitiendo: {str(e)}", screenshot_path)
+            return False, screenshot_path
