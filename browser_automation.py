@@ -630,7 +630,7 @@ class BrowserAutomation:
             self.log("error", f"NDO {ndo}: Error procesando modal de carga: {str(e)}", screenshot_path)
             return False, screenshot_path
         
-        return True, None
+        return True
         
     def download_file(self, ndo, informe_url):
         try:
@@ -695,6 +695,42 @@ class BrowserAutomation:
                 self.new_page.click(transmit_button_selector)
                 
                 self.log("info", f"NDO {ndo}: Botón transmitir presionado exitosamente")
+                
+                self.log("info", f"NDO {ndo}: Esperando botón 'Confirmar'")
+
+                confirm_button_selector = "button#transmitir-prestacion-validada.btn.btn-success[type='button']"
+
+                self.new_page.wait_for_selector("button#transmitir-prestacion-validada", state="visible", timeout=10000)
+
+                confirm_buttons = self.new_page.query_selector_all("button#transmitir-prestacion-validada.btn.btn-success")
+
+                confirm_button = None
+                for button in confirm_buttons:
+                    button_text = button.inner_text().strip()
+                    if "Confirmar" in button_text:
+                        confirm_button = button
+                        self.log("info", f"NDO {ndo}: Botón 'Confirmar' encontrado con texto: '{button_text}'")
+                        break
+
+                if not confirm_button:
+                    self.log("error", f"NDO {ndo}: No se encontró el botón 'Confirmar' específico")
+                    return False, None
+
+                self.log("info", f"NDO {ndo}: Haciendo clic en botón 'Confirmar' y manejando diálogo")
+
+                with self.new_page.expect_dialog() as dialog_info:
+                    confirm_button.click()
+                
+                dialog = dialog_info.value
+                dialog_message = dialog.message
+                self.log("info", f"NDO {ndo}: Diálogo del navegador recibido: '{dialog_message}'")
+                
+                if "INFORMACION TRANSMITIDA" in dialog_message:
+                    dialog.accept()
+                    self.log("info", f"NDO {ndo}: Diálogo de confirmación aceptado - Transmisión completada")
+                else:
+                    self.log("warning", f"NDO {ndo}: Mensaje de diálogo inesperado: {dialog_message}")
+                    dialog.accept()
                 
                 time.sleep(2)
                 
