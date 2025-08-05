@@ -275,7 +275,7 @@ class BrowserAutomation:
                                 else:
                                     failed_row_data = {
                                         'NDO': ndo,
-                                        'Status': f'Archivo subido pero no se pudo transmitir - COD {cod_excel}',
+                                        'Status': f'Archivo subido por el bot pero no se pudo transmitir - COD {cod_excel}',
                                         'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                         'COD_Buscado': cod_excel,
                                         'Resultados_Tabla': len(table_data),
@@ -285,16 +285,6 @@ class BrowserAutomation:
                                     if transmit_error_screenshot:
                                         failed_row_data['Screenshot'] = transmit_error_screenshot
                                     failed_rows.append(failed_row_data)
-                                
-                                processed_rows.append({
-                                    'NDO': ndo,
-                                    'Status': f'Archivo subido exitosamente - COD {cod_excel}',
-                                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    'Resultados': len(table_data),
-                                    'COD_Encontrado': cod_excel,
-                                    'Button_Status': 'File uploaded successfully',
-                                    'Upload_Status': 'Uploaded'
-                                })
                             else:
                                 self.log("error", f"NDO {ndo}: Upload result no es True: {upload_result}")
                                 error_screenshot = upload_result[1] if isinstance(upload_result, tuple) else None
@@ -326,7 +316,7 @@ class BrowserAutomation:
                             else:
                                 failed_row_data = {
                                     'NDO': ndo,
-                                    'Status': f'Archivo ya subido pero no se pudo transmitir - COD {cod_excel}',
+                                    'Status': f'Archivo ya subido anteriormente pero no se pudo transmitir - COD {cod_excel}',
                                     'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     'COD_Buscado': cod_excel,
                                     'Resultados_Tabla': len(table_data),
@@ -698,8 +688,6 @@ class BrowserAutomation:
                 
                 self.log("info", f"NDO {ndo}: Esperando botón 'Confirmar'")
 
-                confirm_button_selector = "button#transmitir-prestacion-validada.btn.btn-success[type='button']"
-
                 self.new_page.wait_for_selector("button#transmitir-prestacion-validada", state="visible", timeout=10000)
 
                 confirm_buttons = self.new_page.query_selector_all("button#transmitir-prestacion-validada.btn.btn-success")
@@ -718,26 +706,24 @@ class BrowserAutomation:
 
                 self.log("info", f"NDO {ndo}: Haciendo clic en botón 'Confirmar' y manejando diálogo")
 
-                with self.new_page.expect_dialog() as dialog_info:
-                    confirm_button.click()
-                
-                dialog = dialog_info.value
-                dialog_message = dialog.message
-                self.log("info", f"NDO {ndo}: Diálogo del navegador recibido: '{dialog_message}'")
-                
-                if "INFORMACION TRANSMITIDA" in dialog_message:
-                    dialog.accept()
-                    self.log("info", f"NDO {ndo}: Diálogo de confirmación aceptado - Transmisión completada")
-                else:
-                    self.log("warning", f"NDO {ndo}: Mensaje de diálogo inesperado: {dialog_message}")
-                    dialog.accept()
-                
-                time.sleep(2)
-                
-                return True, None
-            else:
-                self.log("warning", f"NDO {ndo}: No se puede transmitir - Botones no están en estado correcto")
-                return False, None
+                try:
+                    with self.new_page.expect_event("dialog", timeout=15000) as dialog_info:
+                        confirm_button.click()
+                        
+                    dialog = dialog_info.value
+                    dialog_message = dialog.message
+                    self.log("info", f"NDO {ndo}: Dialogo del navegador recibido: '{dialog_message}'")
+                    
+                    dialog.accept
+
+                    if "INFORMACION TRANSMITIDA" in dialog_message:
+                        self.log("info", f"NDO {ndo}: Diálogo de confirmación aceptado - Transmisión completada")
+                    else:
+                        self.log("warning", f"NDO {ndo}: Mensaje de diálogo inesperado: {dialog_message}")
+                    return True, None
+                except Exception as dialog_error:
+                    self.log("error", f"NDO {ndo}: Error manejando diálogo: {str(dialog_error)}")
+                    return False, None
                 
         except Exception as e:
             screenshot_path = self.take_screenshot(f"transmit_error_ndo_{ndo}")
