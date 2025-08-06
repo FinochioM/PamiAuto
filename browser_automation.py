@@ -18,6 +18,7 @@ class BrowserAutomation:
         self.excel_data = []
         self.processed_rows = []
         self.failed_rows = []
+        self.original_indices = []
 
     def log(self, level, message, screenshot_path=None):
         if self.logger:
@@ -135,8 +136,23 @@ class BrowserAutomation:
         try:
             self.log("info", f"Leyendo archivo Excel: {INPUT_EXCEL_FILE}")
             df = pd.read_excel(INPUT_EXCEL_FILE)
-            self.excel_data = df.to_dict('records')
-            self.log("info", f"Se leyeron {len(self.excel_data)} registros del Excel")
+            
+            if 'Procesado' not in df.columns:
+                self.log("info", "Agregando columna 'Procesado' al Excel")
+                df['Procesado'] = 'No'
+            else:
+                self.log("info", "Estableciendo todos los casos como 'No' en columna 'Procesado'")
+                df['Procesado'] = 'No'
+            
+            df.to_excel(INPUT_EXCEL_FILE, index=False)
+            self.log("info", "Archivo Excel actualizado con columna 'Procesado'")
+            
+            unprocessed_df = df[df['Procesado'] == 'No']
+            self.excel_data = unprocessed_df.to_dict('records')
+            
+            self.original_indices = unprocessed_df.index.tolist()
+            
+            self.log("info", f"Se encontraron {len(self.excel_data)} registros sin procesar")
             return self.excel_data
         except Exception as e:
             self.log("error", f"Error leyendo archivo Excel: {str(e)}")
@@ -272,6 +288,8 @@ class BrowserAutomation:
                                         'Button_Status': 'File uploaded and transmitted',
                                         'Upload_Status': 'Completed'
                                     })
+                                    
+                                    self.update_case_as_processed(index)
                                 else:
                                     failed_row_data = {
                                         'NDO': ndo,
@@ -313,6 +331,7 @@ class BrowserAutomation:
                                     'Button_Status': 'File already uploaded and transmitted',
                                     'Upload_Status': 'Already uploaded and completed'
                                 })
+                                self.update_case_as_processed(index)
                             else:
                                 failed_row_data = {
                                     'NDO': ndo,
@@ -729,3 +748,13 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot(f"transmit_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error verificando/transmitiendo: {str(e)}", screenshot_path)
             return False, screenshot_path
+        
+    def update_case_as_processed(self, case_index):
+        try:
+            df = pd.read_excel(INPUT_EXCEL_FILE)
+            original_index = self.original_indices[case_index]
+            df.loc[original_index, 'Procesado'] = 'Si'
+            df.to_excel(INPUT_EXCEL_FILE, index=False)
+            self.log("info", f"Caso en fila {original_index + 1} marcado como procesado")
+        except Exception as e:
+            self.log("error", f"Error actualizando caso como procesado: {str(e)}")
