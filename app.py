@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject
 from browser_automation import BrowserAutomation
 from logger import AutomationLogger
+from logs_window import LogsWindow
 
 class WorkerSignals(QObject):
     status_update = pyqtSignal(str, str)
@@ -126,7 +127,8 @@ class MainWindow(QMainWindow):
             self.logger.info(f"Log guardado en: {log_file}")
     
     def show_logs(self):
-        QMessageBox.information(self, "Logs", "Funcionalidad de logs - Por implementar")
+        logs_window = LogsWindow(self.logger, self)
+        logs_window.exec()
     
     def show_settings(self):
         QMessageBox.information(self, "Configuración", "Funcionalidad de configuración - Por implementar")
