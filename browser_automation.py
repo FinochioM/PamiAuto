@@ -18,6 +18,7 @@ class BrowserAutomation:
         self.excel_data = []
         self.processed_rows = []
         self.failed_rows = []
+        self.already_processed_cases = []
         self.original_indices = []
 
     def log(self, level, message, screenshot_path=None):
@@ -141,18 +142,44 @@ class BrowserAutomation:
                 self.log("info", "Agregando columna 'Procesado' al Excel")
                 df['Procesado'] = 'No'
             else:
-                self.log("info", "Estableciendo todos los casos como 'No' en columna 'Procesado'")
-                df['Procesado'] = 'No'
+                self.log("info", "La columna 'Procesado' ya existe - manteniendo casos ya procesados")
+                df['Procesado'] = df['Procesado'].fillna('No')
+                df.loc[df['Procesado'].isin(['', None, 0]), 'Procesado'] = 'No'
             
             df.to_excel(INPUT_EXCEL_FILE, index=False)
             self.log("info", "Archivo Excel actualizado con columna 'Procesado'")
+            
+            already_processed_df = df[df['Procesado'] == 'Si']
+            self.already_processed_cases = []
+            
+            for _, row in already_processed_df.iterrows():
+                ndo = row.get('NDO', 'N/A')
+                cod = row.get('COD', 'N/A')
+                self.already_processed_cases.append({
+                    'NDO': ndo,
+                    'COD': cod,
+                    'Status': 'Ya procesado anteriormente',
+                    'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'APE': row.get('APE', ''),
+                    'NOM': row.get('NOM', '')
+                })
             
             unprocessed_df = df[df['Procesado'] == 'No']
             self.excel_data = unprocessed_df.to_dict('records')
             
             self.original_indices = unprocessed_df.index.tolist()
             
-            self.log("info", f"Se encontraron {len(self.excel_data)} registros sin procesar")
+            total_cases = len(df)
+            processed_cases = len(already_processed_df)
+            unprocessed_cases = len(self.excel_data)
+            
+            self.log("info", f"Total de casos: {total_cases}, Ya procesados: {processed_cases}, Sin procesar: {unprocessed_cases}")
+            
+            if processed_cases > 0:
+                self.log("info", f"Casos ya procesados anteriormente:")
+                for case in self.already_processed_cases:
+                    self.log("info", f"  - NDO {case['NDO']} (COD {case['COD']}) - {case['APE']} {case['NOM']}")
+            
             return self.excel_data
         except Exception as e:
             self.log("error", f"Error leyendo archivo Excel: {str(e)}")

@@ -121,8 +121,9 @@ class MainWindow(QMainWindow):
         
         processed_rows = getattr(self.automation, 'processed_rows', [])
         failed_rows = getattr(self.automation, 'failed_rows', [])
+        already_processed = getattr(self.automation, 'already_processed_cases', [])
         
-        log_file = self.logger.save_to_excel(processed_rows, failed_rows)
+        log_file = self.logger.save_to_excel(processed_rows, failed_rows, already_processed)
         if log_file:
             self.logger.info(f"Log guardado en: {log_file}")
     
