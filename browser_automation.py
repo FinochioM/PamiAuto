@@ -733,9 +733,9 @@ class BrowserAutomation:
                     dialog_message = dialog.message
                     self.log("info", f"NDO {ndo}: Dialogo del navegador recibido: '{dialog_message}'")
                     
-                    dialog.accept
+                    dialog.accept()
 
-                    if "INFORMACION TRANSMITIDA" in dialog_message:
+                    if "INFORMACIÓN TRANSMITIDA" in dialog_message:
                         self.log("info", f"NDO {ndo}: Diálogo de confirmación aceptado - Transmisión completada")
                     else:
                         self.log("warning", f"NDO {ndo}: Mensaje de diálogo inesperado: {dialog_message}")
