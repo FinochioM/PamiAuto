@@ -13,6 +13,11 @@ ERROR_INDICATORS = [
     "acceso denegado",
 ]
 
+GOOGLE_SHEETS_URL = "https://docs.google.com/spreadsheets/d/16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk/edit?gid=438980283#gid=438980283&fvid=86172977"
+GOOGLE_SHEETS_ID = "16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk"
+WORKSHEET_NAME = "prestaciones_PAMI"
+SERVICE_ACCOUNT_FILE = "credenciales_bio_sheets.json"
+
 def get_first_day_of_month():
     today = date.today()
     first_day_current_month = today.replace(day=1)

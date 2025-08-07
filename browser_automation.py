@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 import pandas as pd
 import requests
+import  gspread
+from google.oauth2.service_account import Credentials
 
 class AutomationError(Exception):
     pass
@@ -135,26 +137,37 @@ class BrowserAutomation:
         
     def read_excel_data(self):
         try:
-            self.log("info", f"Leyendo archivo Excel: {INPUT_EXCEL_FILE}")
-            df = pd.read_excel(INPUT_EXCEL_FILE)
+            self.log("info", "Conectando a Google Sheets")
+            
+            scope = ['https://spreadsheets.google.com/feeds',
+                    'https://www.googleapis.com/auth/drive']
+            
+            creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scope)
+            client = gspread.authorize(creds)
+            
+            sheet = client.open_by_key(GOOGLE_SHEETS_ID).worksheet(WORKSHEET_NAME)
+            
+            data = sheet.get_all_records()
+            df = pd.DataFrame(data)
             
             if 'Procesado' not in df.columns:
-                self.log("info", "Agregando columna 'Procesado' al Excel")
+                self.log("info", "Agregando columna 'Procesado' a Google Sheets")
                 df['Procesado'] = 'No'
+                sheet.update([df.columns.values.tolist()] + df.values.tolist())
             else:
-                self.log("info", "La columna 'Procesado' ya existe - manteniendo casos ya procesados")
+                self.log("info", "La columna 'Procesado' ya existe")
                 df['Procesado'] = df['Procesado'].fillna('No')
                 df.loc[df['Procesado'].isin(['', None, 0]), 'Procesado'] = 'No'
             
-            df.to_excel(INPUT_EXCEL_FILE, index=False)
-            self.log("info", "Archivo Excel actualizado con columna 'Procesado'")
+            self.google_sheet = sheet
+            self.google_df = df
             
             already_processed_df = df[df['Procesado'] == 'Si']
             self.already_processed_cases = []
             
             for _, row in already_processed_df.iterrows():
                 ndo = row.get('NDO', 'N/A')
-                cod = row.get('COD', 'N/A')
+                cod = row.get('CODIGO_PAMI', 'N/A')
                 self.already_processed_cases.append({
                     'NDO': ndo,
                     'COD': cod,
@@ -166,7 +179,6 @@ class BrowserAutomation:
             
             unprocessed_df = df[df['Procesado'] == 'No']
             self.excel_data = unprocessed_df.to_dict('records')
-            
             self.original_indices = unprocessed_df.index.tolist()
             
             total_cases = len(df)
@@ -175,15 +187,11 @@ class BrowserAutomation:
             
             self.log("info", f"Total de casos: {total_cases}, Ya procesados: {processed_cases}, Sin procesar: {unprocessed_cases}")
             
-            if processed_cases > 0:
-                self.log("info", f"Casos ya procesados anteriormente:")
-                for case in self.already_processed_cases:
-                    self.log("info", f"  - NDO {case['NDO']} (COD {case['COD']}) - {case['APE']} {case['NOM']}")
-            
             return self.excel_data
+            
         except Exception as e:
-            self.log("error", f"Error leyendo archivo Excel: {str(e)}")
-            raise AutomationError(f"Failed to read Excel file: {str(e)}")
+            self.log("error", f"Error leyendo Google Sheets: {str(e)}")
+            raise AutomationError(f"Failed to read Google Sheets: {str(e)}")
         
     def process_excel_data(self, excel_data):
         self.log("info", "Procesando datos de Excel")
@@ -192,7 +200,7 @@ class BrowserAutomation:
 
         for index, row in enumerate(excel_data):
             ndo = row.get('NDO', f'Fila_{index + 1}')
-            cod_excel = row.get('COD', '')
+            cod_excel = row.get('CODIGO_PAMI', '')
             self.log("info", f"Iniciando procesamiento de NDO: {ndo} (Fila {index + 1})")
 
             try:
@@ -778,10 +786,11 @@ class BrowserAutomation:
         
     def update_case_as_processed(self, case_index):
         try:
-            df = pd.read_excel(INPUT_EXCEL_FILE)
             original_index = self.original_indices[case_index]
-            df.loc[original_index, 'Procesado'] = 'Si'
-            df.to_excel(INPUT_EXCEL_FILE, index=False)
-            self.log("info", f"Caso en fila {original_index + 1} marcado como procesado")
+            row_number = original_index + 2
+            
+            self.google_sheet.update_cell(row_number, self.google_df.columns.get_loc('Procesado') + 1, 'Si')
+            
+            self.log("info", f"Caso en fila {original_index + 1} marcado como procesado en Google Sheets")
         except Exception as e:
             self.log("error", f"Error actualizando caso como procesado: {str(e)}")
