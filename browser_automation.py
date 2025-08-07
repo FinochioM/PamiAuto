@@ -134,7 +134,7 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot("panel_error")
             self.log("error", "Error navegando a Panel de prestaciones", screenshot_path)
             raise AutomationError("Failed to navigate to Panel de prestaciones")
-        
+            
     def read_excel_data(self):
         try:
             self.log("info", "Conectando a Google Sheets")
@@ -150,10 +150,29 @@ class BrowserAutomation:
             data = sheet.get_all_records()
             df = pd.DataFrame(data)
             
+            if DATE_RANGE_START is not None or DATE_RANGE_END is not None:
+                self.log("info", f"Aplicando filtro de fecha desde {DATE_RANGE_START} hasta {DATE_RANGE_END}")
+                
+                df['FechaTurno'] = pd.to_datetime(df['FechaTurno'], errors='coerce')
+                
+                original_count = len(df)
+                
+                if DATE_RANGE_START is not None:
+                    df = df[df['FechaTurno'] >= DATE_RANGE_START]
+                
+                if DATE_RANGE_END is not None:
+                    end_date_inclusive = pd.Timestamp(DATE_RANGE_END).replace(hour=23, minute=59, second=59)
+                    df = df[df['FechaTurno'] <= end_date_inclusive]
+                
+                df = df.dropna(subset=['FechaTurno'])
+                
+                filtered_count = len(df)
+                self.log("info", f"Filtro aplicado: {original_count} registros originales -> {filtered_count} registros filtrados")
+            
             if 'Procesado' not in df.columns:
                 self.log("info", "Agregando columna 'Procesado' a Google Sheets")
                 df['Procesado'] = 'No'
-                sheet.update([df.columns.values.tolist()] + df.values.tolist())
+                self.log("info", "NOTA: Columna 'Procesado' agregada localmente (no se actualiza Google Sheets cuando se usa filtro de fecha)")
             else:
                 self.log("info", "La columna 'Procesado' ya existe")
                 df['Procesado'] = df['Procesado'].fillna('No')
@@ -185,7 +204,7 @@ class BrowserAutomation:
             processed_cases = len(already_processed_df)
             unprocessed_cases = len(self.excel_data)
             
-            self.log("info", f"Total de casos: {total_cases}, Ya procesados: {processed_cases}, Sin procesar: {unprocessed_cases}")
+            self.log("info", f"Total de casos (filtrados): {total_cases}, Ya procesados: {processed_cases}, Sin procesar: {unprocessed_cases}")
             
             return self.excel_data
             

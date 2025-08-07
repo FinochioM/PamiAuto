@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
 LOGIN_URL = "https://cup.pami.org.ar/controllers/loginController.php"
@@ -17,6 +17,9 @@ GOOGLE_SHEETS_URL = "https://docs.google.com/spreadsheets/d/16r7nB5lPMLEmTEk7Np0
 GOOGLE_SHEETS_ID = "16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk"
 WORKSHEET_NAME = "prestaciones_PAMI"
 SERVICE_ACCOUNT_FILE = "credenciales_bio_sheets.json"
+
+DATE_RANGE_START = datetime(2025, 8, 1)
+DATE_RANGE_END = datetime(2025, 8, 2)
 
 def get_first_day_of_month():
     today = date.today()
