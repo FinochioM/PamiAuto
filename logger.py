@@ -3,12 +3,19 @@ import os
 from datetime import datetime
 
 class AutomationLogger:
-    def __init__(self, log_dir="logs", screenshot_dir="screenshots"):
+    def __init__(self, log_dir="logs", screenshot_dir="screenshots", settings_manager = None):
         self.logs = []
-        self.log_dir = log_dir
+        
+        if settings_manager:
+            self.log_dir = log_dir
+            self.screenshot_dir = settings_manager.get_screenshot_dir()
+        else:
+            self.log_dir = log_dir
+            self.screenshot_dir = screenshot_dir
+        
         self.processed_rows = []
         self.failed_rows = []
-        self.screenshot_dir = screenshot_dir
+
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
         if not os.path.exists(self.screenshot_dir):

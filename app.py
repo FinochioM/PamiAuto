@@ -6,6 +6,8 @@ from PyQt6.QtCore import QTimer, pyqtSignal, QObject
 from browser_automation import BrowserAutomation
 from logger import AutomationLogger
 from logs_window import LogsWindow
+from settings_manager import SettingsManager
+from settings_window import SettingsWindow
 
 class WorkerSignals(QObject):
     status_update = pyqtSignal(str, str)
@@ -17,8 +19,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         uic.loadUi(r"..\PamiAuto\ui\main.ui", self)
         
+        self.settings_manager = SettingsManager()
+        
         self.automation = None
-        self.logger = AutomationLogger()
+        self.logger = AutomationLogger(settings_manager=self.settings_manager)
         self.worker_signals = WorkerSignals()
         
         self.setup_connections()
@@ -66,7 +70,7 @@ class MainWindow(QMainWindow):
             self.worker_signals.status_update.emit("Iniciando automatización...", "orange")
             
             self.logger.info("Creando instancia de BrowserAutomation")
-            self.automation = BrowserAutomation(self.logger)
+            self.automation = BrowserAutomation(self.logger, self.settings_manager)
 
             self.logger.info("Leyendo datos de Excel")
             self.worker_signals.status_update.emit("Leyendo datos de Excel...", "orange")
@@ -132,7 +136,8 @@ class MainWindow(QMainWindow):
         logs_window.exec()
     
     def show_settings(self):
-        QMessageBox.information(self, "Configuración", "Funcionalidad de configuración - Por implementar")
+        settings_window = SettingsWindow(self.settings_manager, self)
+        settings_window.exec()
 
 def main():
     app = QApplication(sys.argv)

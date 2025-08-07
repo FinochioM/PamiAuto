@@ -12,11 +12,12 @@ class AutomationError(Exception):
     pass
 
 class BrowserAutomation:
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, settings_manager = None):
         self.browser = None
         self.page = None
         self.new_page = None
         self.logger = logger
+        self.settings_manager = settings_manager
         self.excel_data = []
         self.processed_rows = []
         self.failed_rows = []
@@ -31,7 +32,13 @@ class BrowserAutomation:
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{description}_{timestamp}.png"
-            filepath = os.path.join(SCREENSHOT_DIR, filename)
+            
+            screenshot_dir = self.settings_manager.get_screenshot_dir() if self.settings_manager else SCREENSHOT_DIR
+            
+            if not os.path.exists(screenshot_dir):
+                os.makedirs(screenshot_dir)
+            
+            filepath = os.path.join(screenshot_dir, filename)
             
             current_page = self.new_page if self.new_page else self.page
             if current_page:
@@ -58,7 +65,8 @@ class BrowserAutomation:
 
         self.log("info", "Creando nueva página")
         self.page = self.browser.new_page()
-        self.page.set_default_timeout(BROWSER_TIMEOUT)
+        timeout = self.settings_manager.get_browser_timeout() if self.settings_manager else BROWSER_TIMEOUT
+        self.page.set_default_timeout(timeout)
 
         self.log("info", "Navegador iniciado correctamente")
 
@@ -114,7 +122,8 @@ class BrowserAutomation:
             self.page.click("#cup_ome")
 
         self.new_page = new_page_info.value
-        self.new_page.set_default_timeout(BROWSER_TIMEOUT)
+        timeout = self.settings_manager.get_browser_timeout() if self.settings_manager else BROWSER_TIMEOUT
+        self.page.set_default_timeout(timeout)
 
         self.log("info", "Nueva página OME abierta correctamente")
         self.log("info", f"URL de nueva página: {self.new_page.url}")
@@ -700,8 +709,10 @@ class BrowserAutomation:
         
     def download_file(self, ndo, informe_url):
         try:
-            if not os.path.exists(DOWNLOADS_DIR):
-                os.makedirs(DOWNLOADS_DIR)
+            downloads_dir = self.settings_manager.get_downloads_dir() if self.settings_manager else DOWNLOADS_DIR
+            
+            if not os.path.exists(downloads_dir):
+                os.makedirs(downloads_dir)
                 
             self.log("info", f"NDO {ndo}: Descargando archivo desde: {informe_url}")
             
@@ -709,7 +720,7 @@ class BrowserAutomation:
             response.raise_for_status()
             
             filename = f"informe_{ndo}.pdf"
-            filepath = os.path.join(DOWNLOADS_DIR, filename)
+            filepath = os.path.join(downloads_dir, filename)
             
             with open(filepath, 'wb') as file:
                 file.write(response.content)
