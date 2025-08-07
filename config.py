@@ -18,8 +18,8 @@ GOOGLE_SHEETS_ID = "16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk"
 WORKSHEET_NAME = "prestaciones_PAMI"
 SERVICE_ACCOUNT_FILE = "credenciales_bio_sheets.json"
 
-DATE_RANGE_START = datetime(2025, 8, 1)
-DATE_RANGE_END = datetime(2025, 8, 2)
+DATE_RANGE_START = datetime(2025, 8, 1, 7, 24) 
+DATE_RANGE_END = datetime(2025, 8, 1, 7, 25)
 
 def get_first_day_of_month():
     today = date.today()

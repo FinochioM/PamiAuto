@@ -154,18 +154,20 @@ class BrowserAutomation:
                 self.log("info", f"Aplicando filtro de fecha desde {DATE_RANGE_START} hasta {DATE_RANGE_END}")
                 
                 df['FechaTurno'] = pd.to_datetime(df['FechaTurno'], errors='coerce')
-                
                 original_count = len(df)
                 
                 if DATE_RANGE_START is not None:
                     df = df[df['FechaTurno'] >= DATE_RANGE_START]
-                
+
                 if DATE_RANGE_END is not None:
-                    end_date_inclusive = pd.Timestamp(DATE_RANGE_END).replace(hour=23, minute=59, second=59)
+                    if DATE_RANGE_END.hour == 0 and DATE_RANGE_END.minute == 0 and DATE_RANGE_END.second == 0:
+                        end_date_inclusive = pd.Timestamp(DATE_RANGE_END).replace(hour=23, minute=59, second=59)
+                    else:
+                        end_date_inclusive = pd.Timestamp(DATE_RANGE_END)
+                    
                     df = df[df['FechaTurno'] <= end_date_inclusive]
                 
                 df = df.dropna(subset=['FechaTurno'])
-                
                 filtered_count = len(df)
                 self.log("info", f"Filtro aplicado: {original_count} registros originales -> {filtered_count} registros filtrados")
             
@@ -199,6 +201,7 @@ class BrowserAutomation:
             unprocessed_df = df[df['Procesado'] == 'No']
             self.excel_data = unprocessed_df.to_dict('records')
             self.original_indices = unprocessed_df.index.tolist()
+            self.original_sheet_rows = [idx + 2 for idx in unprocessed_df.index.tolist()]
             
             total_cases = len(df)
             processed_cases = len(already_processed_df)
@@ -293,14 +296,14 @@ class BrowserAutomation:
                     button_status, error_screenshot = self.check_button_status(ndo, matching_row)
                     
                     if button_status == "processed":
-                        self.log("info", f"NDO {ndo}: Caso ya procesado - Marcando como completado.")
+                        self.log("info", f"NDO {ndo}: Caso ya procesado o validacion manual pendiente - Marcando como completado.")
                         processed_rows.append({
                             'NDO': ndo,
-                            'Status': f'Ya estaba procesado - COD {cod_excel}',
+                            'Status': f'Ya estaba procesado o falta validacion manual - COD {cod_excel}',
                             'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             'Resultados': len(table_data),
                             'COD_Encontrado': cod_excel,
-                            'Button_Status': 'Already processed'
+                            'Button_Status': 'Already processed or manual validation missing'
                         })
                     elif button_status == "needs_upload":
                         self.log("info", f"NDO {ndo}: Boton de carga azul encontrado - Verificando estado de carga.")
@@ -524,7 +527,7 @@ class BrowserAutomation:
             classes = button.get_attribute("class")
             
             if "btn-success" in classes:
-                self.log("info", f"NDO {ndo}: Boton verde - Caso ya procesado.")
+                self.log("info", f"NDO {ndo}: Boton verde - Validacion manual no realizada.")
                 return "processed", None
             elif "btn-primary" in classes:
                 self.log("info", f"NDO {ndo}: Boton azul - Requiere carga de archivo.")
@@ -802,14 +805,13 @@ class BrowserAutomation:
             screenshot_path = self.take_screenshot(f"transmit_error_ndo_{ndo}")
             self.log("error", f"NDO {ndo}: Error verificando/transmitiendo: {str(e)}", screenshot_path)
             return False, screenshot_path
-        
+            
     def update_case_as_processed(self, case_index):
         try:
-            original_index = self.original_indices[case_index]
-            row_number = original_index + 2
+            sheet_row_number = self.original_sheet_rows[case_index]
             
-            self.google_sheet.update_cell(row_number, self.google_df.columns.get_loc('Procesado') + 1, 'Si')
+            self.google_sheet.update_cell(sheet_row_number, self.google_df.columns.get_loc('Procesado') + 1, 'Si')
             
-            self.log("info", f"Caso en fila {original_index + 1} marcado como procesado en Google Sheets")
+            self.log("info", f"Caso en fila {sheet_row_number} marcado como procesado en Google Sheets")
         except Exception as e:
             self.log("error", f"Error actualizando caso como procesado: {str(e)}")
