@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QFileDialog, QDateTimeEdit, QCheckBox)
 from PyQt6.QtCore import Qt, QDateTime
 import os
-import datetime
+from datetime import datetime
 
 class SettingsWindow(QDialog):
     def __init__(self, settings_manager, parent=None):

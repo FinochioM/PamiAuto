@@ -121,4 +121,4 @@ class SettingsManager:
     
     def is_date_range_end_enabled(self):
         """Check if date range end is enabled"""
-        return self.get("date_range_and_enabled")
+        return self.get("date_range_end_enabled")
