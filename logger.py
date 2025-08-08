@@ -5,17 +5,32 @@ from datetime import datetime
 class AutomationLogger:
     def __init__(self, log_dir="logs", screenshot_dir="screenshots", settings_manager = None):
         self.logs = []
+        self.settings_manager = settings_manager
         
-        if settings_manager:
-            self.log_dir = settings_manager.get_logs_dir()
-            self.screenshot_dir = settings_manager.get_screenshot_dir()
-        else:
-            self.log_dir = log_dir
-            self.screenshot_dir = screenshot_dir
+        self.fallback_log_dir = log_dir
+        self.fallback_screenshot_dir = screenshot_dir
         
         self.processed_rows = []
         self.failed_rows = []
 
+        self._ensure_directories_exist()
+        
+    @property
+    def log_dir(self):
+        """Get current log directory from settings or fallback"""
+        if self.settings_manager:
+            return self.settings_manager.get_logs_dir()
+        return self.fallback_log_dir
+    
+    @property
+    def screenshot_dir(self):
+        """Get current screenshot directory from settings or fallback"""
+        if self.settings_manager:
+            return self.settings_manager.get_screenshot_dir()
+        return self.fallback_screenshot_dir
+    
+    def _ensure_directories_exist(self):
+        """Create directories if they don't exist"""
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
         if not os.path.exists(self.screenshot_dir):
@@ -52,6 +67,8 @@ class AutomationLogger:
         self.log("WARNING", message, screenshot_path)
     
     def save_to_excel(self, processed_rows=None, failed_rows=None, already_processed=None):
+        self._ensure_directories_exist()
+        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"automation_log_{timestamp}.xlsx"
         filepath = os.path.join(self.log_dir, filename)

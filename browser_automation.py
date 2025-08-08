@@ -65,10 +65,11 @@ class BrowserAutomation:
 
         self.log("info", "Creando nueva página")
         self.page = self.browser.new_page()
+
         timeout = self.settings_manager.get_browser_timeout() if self.settings_manager else BROWSER_TIMEOUT
         self.page.set_default_timeout(timeout)
 
-        self.log("info", "Navegador iniciado correctamente")
+        self.log("info", f"Navegador iniciado correctamente (timeout: {timeout}ms)")
 
     def navigate_to_login(self):
         self.log("info", f"Navegando a: {LOGIN_URL}")
@@ -122,8 +123,9 @@ class BrowserAutomation:
             self.page.click("#cup_ome")
 
         self.new_page = new_page_info.value
+        
         timeout = self.settings_manager.get_browser_timeout() if self.settings_manager else BROWSER_TIMEOUT
-        self.page.set_default_timeout(timeout)
+        self.new_page.set_default_timeout(timeout)
 
         self.log("info", "Nueva página OME abierta correctamente")
         self.log("info", f"URL de nueva página: {self.new_page.url}")
