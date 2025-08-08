@@ -7,7 +7,7 @@ class AutomationLogger:
         self.logs = []
         
         if settings_manager:
-            self.log_dir = log_dir
+            self.log_dir = settings_manager.get_logs_dir()
             self.screenshot_dir = settings_manager.get_screenshot_dir()
         else:
             self.log_dir = log_dir

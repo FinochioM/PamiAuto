@@ -75,6 +75,19 @@ class SettingsWindow(QDialog):
         
         dirs_layout.addLayout(downloads_layout)
         
+        logs_layout = QHBoxLayout()
+        logs_label = QLabel("Directorio de logs:")
+        self.logs_dir_input = QLineEdit()
+        self.logs_dir_input.setReadOnly(True)
+        logs_browse_btn = QPushButton("Examinar")
+        logs_browse_btn.clicked.connect(self.browse_logs_dir)
+
+        logs_layout.addWidget(logs_label)
+        logs_layout.addWidget(self.logs_dir_input)
+        logs_layout.addWidget(logs_browse_btn)
+
+        dirs_layout.addLayout(logs_layout)
+        
         dir_help_label = QLabel("Los directorios se crearán automáticamente si no existen.")
         dir_help_label.setStyleSheet("color: #666; font-size: 11px; font-style: italic;")
         dirs_layout.addWidget(dir_help_label)
@@ -161,6 +174,7 @@ class SettingsWindow(QDialog):
         
         self.screenshot_dir_input.setText(self.settings_manager.get_screenshot_dir())
         self.downloads_dir_input.setText(self.settings_manager.get_downloads_dir())
+        self.logs_dir_input.setText(self.settings_manager.get_logs_dir())
     
     def browse_screenshot_dir(self):
         """Open folder dialog to select screenshot directory"""
@@ -200,6 +214,7 @@ class SettingsWindow(QDialog):
             
             self.settings_manager.set_screenshot_dir(self.screenshot_dir_input.text())
             self.settings_manager.set_downloads_dir(self.downloads_dir_input.text())
+            self.settings_manager.set_logs_dir(self.logs_dir_input.text())
             
             if self.settings_manager.save_settings():
                 QMessageBox.information(self, "Configuración", 
@@ -220,3 +235,19 @@ class SettingsWindow(QDialog):
             self.timeout_spinbox.setValue(30)  # Default 30 seconds
             self.screenshot_dir_input.setText("screenshots")
             self.downloads_dir_input.setText("downloads")
+            self.logs_dir_input.setText("logs")
+
+    def browse_logs_dir(self):
+        """Open folder dialog to select logs directory"""
+        current_dir = self.logs_dir_input.text()
+        if not current_dir or not os.path.exists(current_dir):
+            current_dir = os.getcwd()
+        
+        directory = QFileDialog.getExistingDirectory(
+            self, 
+            "Seleccionar Directorio de Logs", 
+            current_dir
+        )
+        
+        if directory:
+            self.logs_dir_input.setText(directory)

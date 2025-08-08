@@ -9,6 +9,7 @@ class SettingsManager:
             "browser_timeout": BROWSER_TIMEOUT,
             "screenshot_dir": SCREENSHOT_DIR,
             "downloads_dir": DOWNLOADS_DIR,
+            "logs_dir": "logs",
         }
         self.settings = self.load_settings()
     
@@ -68,3 +69,11 @@ class SettingsManager:
     def set_downloads_dir(self, directory):
         """Set downloads directory"""
         self.set("downloads_dir", directory)
+        
+    def get_logs_dir(self):
+        """Get logs directory"""
+        return self.get("logs_dir")
+    
+    def set_logs_dir(self, directory):
+        """Set logs directory"""
+        self.set("logs_dir", directory)
