@@ -139,8 +139,9 @@ class BrowserAutomation:
 
             self.log("info", "Haciendo clic en Panel de prestaciones")
             self.new_page.click("a[href='transmision.php']")
-
-            self.log("info", "Navegación a Panel de prestaciones completada")
+            
+            delay = random_delay_medium()
+            self.log("info", f"Esperando {delay:.1f} segundos después de cargar panel de prestaciones")
         except:
             screenshot_path = self.take_screenshot("panel_error")
             self.log("error", "Error navegando a Panel de prestaciones", screenshot_path)
@@ -169,16 +170,12 @@ class BrowserAutomation:
                 procesado_col = len(header_row) + 1
                 sheet.update_cell(1, procesado_col, 'Procesado')
                 
-                if len(all_values) > 1:
-                    for row_idx in range(2, len(all_values) + 1):
-                        sheet.update_cell(row_idx, procesado_col, 'No')
-                
                 data = sheet.get_all_records()
                 df = pd.DataFrame(data)
-                self.log("info", "Columna 'Procesado' agregada exitosamente a Google Sheets")
+                self.log("info", "Columna 'Procesado' agregada exitosamente (solo encabezado)")
             else:
                 self.log("info", "La columna 'Procesado' ya existe en Google Sheets")
-            
+
             df['_original_sheet_row'] = df.index + 2
             
             if self.settings_manager:
@@ -258,6 +255,10 @@ class BrowserAutomation:
         failed_rows = []
 
         for index, row in enumerate(excel_data):
+            if index > 0:
+                delay = random_delay_long()
+                self.log("info", f"Esperando {delay:.1f} segundos antes del siguiente caso")
+                
             ndo = row.get('NDO', f'Fila_{index + 1}')
             cod_excel = row.get('CODIGO_PAMI', '')
             self.log("info", f"Iniciando procesamiento de NDO: {ndo} (Fila {index + 1})")
@@ -268,6 +269,9 @@ class BrowserAutomation:
                 self.new_page.wait_for_selector("select[name='tipo_afiliado']", state="visible")
                 self.new_page.select_option("select[name='tipo_afiliado']", value="2")
                 self.log("info", f"NDO {ndo}: Selección completada")
+                
+                delay = random_delay_micro()
+                self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos después de selección")
 
                 # ingresar primer dia del mes anterior en el campo 'Fecha turno desde'
                 date_value = get_first_day_of_month()
@@ -279,20 +283,25 @@ class BrowserAutomation:
                 self.new_page.press("input[name='f_turno_desde']", "Enter")
                 self.log("info", f"NDO {ndo}: Fecha tipeada y confirmada correctamente")
 
-                # esperar un poco para que se actualice la pagina
-                self.log("info", f"NDO {ndo}: Esperando actualización de página")
-                time.sleep(3)
+                delay = random_delay_short()
+                self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos entre fecha y NDO")
 
                 self.log("info", f"NDO {ndo}: Ingresando NDO en campo de afiliado")
                 self.new_page.wait_for_selector("input[name='n_afiliado']", state="visible")
                 self.new_page.fill("input[name='n_afiliado']", str(ndo))
                 self.log("info", f"NDO {ndo}: NDO ingresado correctamente")
+                
+                delay = random_delay_micro()
+                self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de buscar")
 
                 # apretar en el botón Buscar
                 self.log("info", f"NDO {ndo}: Haciendo clic en botón Buscar")
                 self.new_page.wait_for_selector("input[name='buscar']", state="visible")
                 self.new_page.click("input[name='buscar']")
                 self.log("info", f"NDO {ndo}: Búsqueda iniciada correctamente")
+                
+                delay = random_delay_short()
+                self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos para que carguen los resultados")
                 
                 # extraer datos de la tabla
                 table_data = self.extract_table_data(ndo)
@@ -497,7 +506,10 @@ class BrowserAutomation:
         try:
             self.log("info", f"NDO {ndo}: Esperando que aparezca la tabla de resultados.")
             self.new_page.wait_for_selector("table.bandeja-transmision", state="visible", timeout=10000)
-            time.sleep(2)
+            
+            delay = random_delay_micro()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos para estabilización de tabla")
+        
             rows = self.new_page.query_selector_all("tbody#ordenes tr")
 
             if not rows:
@@ -547,6 +559,9 @@ class BrowserAutomation:
     def check_button_status(self, ndo, matching_row_data):
         try:
             self.log("info", f"NDO {ndo}: Verificando estado del boton")
+            
+            delay = random_delay_micro()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de verificar botón")
             
             data_id = matching_row_data.get('data_id')
             row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
@@ -621,6 +636,9 @@ class BrowserAutomation:
                 self.log("error", f"NDO {ndo}: No se pudo descargar el archivo")
                 return False, None
             
+            delay = random_delay_micro()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de abrir modal de carga")
+        
             self.log("info", f"NDO {ndo}: Haciendo clic en botón de carga")
             
             data_id = matching_row_data.get('data_id')
@@ -632,7 +650,9 @@ class BrowserAutomation:
             
             self.log("info", f"NDO {ndo}: Esperando que aparezca el modal de carga")
             self.new_page.wait_for_selector("select[name='m_t_doc']", state="visible", timeout=10000)
-            time.sleep(2)
+            
+            delay = random_delay_short()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos para que cargue el modal")
             
             self.log("info", f"NDO {ndo}: Modal de carga detectado, obteniendo opciones del dropdown")
             
@@ -679,6 +699,9 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Seleccionando archivo en el diálogo")
             file_chooser.set_files(downloaded_file_path)
             self.log("info", f"NDO {ndo}: Archivo seleccionado exitosamente")
+            
+            delay = random_delay_file_operations()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos después de seleccionar archivo")
             
             self.log("info", f"NDO {ndo}: Esperando confirmación de carga de archivo")
             try:
@@ -764,6 +787,9 @@ class BrowserAutomation:
         try:
             self.log("info", f"NDO {ndo}: Verificando estado de ambos botones antes de transmitir")
             
+            delay = random_delay_short()
+            self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de verificar transmisión")
+            
             data_id = matching_row_data.get('data_id')
             row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
             
@@ -794,6 +820,9 @@ class BrowserAutomation:
             if check_is_blue and upload_is_blue:
                 self.log("info", f"NDO {ndo}: Ambos botones están azules - Procediendo a transmitir")
                 
+                delay = random_delay_short()
+                self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de transmitir")
+           
                 transmit_button_selector = f"{row_selector} .boton-historial.fas.fa-arrow-right.transmitir"
                 
                 self.new_page.wait_for_selector(transmit_button_selector, state="visible", timeout=5000)

@@ -1,5 +1,7 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+import time
+import random
 
 LOGIN_URL = "https://cup.pami.org.ar/controllers/loginController.php"
 BROWSER_TIMEOUT = 30000 # migrated to settings
@@ -25,3 +27,42 @@ def get_first_day_of_month():
     first_day_current_month = today.replace(day=1)
     previous_month = first_day_current_month - relativedelta(months=1)
     return previous_month.strftime("%d/%m/%Y")
+
+def random_delay_short():
+    """Random delay between 1-5 seconds (closer to 5)"""
+    delay = random.uniform(3.0, 5.0)
+    time.sleep(delay)
+    return delay
+
+def random_delay_medium():
+    """Random delay between 5-10 seconds"""
+    delay = random.uniform(5.0, 10.0)
+    time.sleep(delay)
+    return delay
+
+def random_delay_long():
+    """Random delay between 10-30 seconds (between cases)"""
+    delay = random.uniform(10.0, 30.0)
+    time.sleep(delay)
+    return delay
+
+def random_delay_micro():
+    """Very short random delay between 0.5-2 seconds"""
+    delay = random.uniform(0.5, 2.0)
+    time.sleep(delay)
+    return delay
+
+def random_delay_file_operations():
+    """Random delay for file operations 2-7 seconds"""
+    delay = random.uniform(2.0, 7.0)
+    time.sleep(delay)
+    return delay
+
+def column_number_to_letter(col_num):
+    """Convert column number to letter (1=A, 2=B, etc.)"""
+    result = ""
+    while col_num > 0:
+        col_num -= 1
+        result = chr(65 + col_num % 26) + result
+        col_num //= 26
+    return result
