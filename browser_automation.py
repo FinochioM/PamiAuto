@@ -163,26 +163,35 @@ class BrowserAutomation:
             
             df['_original_sheet_row'] = df.index + 2
             
-            if DATE_RANGE_START is not None or DATE_RANGE_END is not None:
-                self.log("info", f"Aplicando filtro de fecha desde {DATE_RANGE_START} hasta {DATE_RANGE_END}")
+            if self.settings_manager:
+                date_range_start = self.settings_manager.get_date_range_start()
+                date_range_end = self.settings_manager.get_date_range_end()
+            else:
+                date_range_start = DATE_RANGE_START if 'DATE_RANGE_START' in globals() else None
+                date_range_end = DATE_RANGE_END if 'DATE_RANGE_END' in globals() else None
+            
+            if date_range_start is not None or date_range_end is not None:
+                self.log("info", f"Aplicando filtro de fecha desde {date_range_start} hasta {date_range_end}")
                 
                 df['FechaTurno'] = pd.to_datetime(df['FechaTurno'], errors='coerce')
                 original_count = len(df)
                 
-                if DATE_RANGE_START is not None:
-                    df = df[df['FechaTurno'] >= DATE_RANGE_START]
+                if date_range_start is not None:
+                    df = df[df['FechaTurno'] >= date_range_start]
 
-                if DATE_RANGE_END is not None:
-                    if DATE_RANGE_END.hour == 0 and DATE_RANGE_END.minute == 0 and DATE_RANGE_END.second == 0:
-                        end_date_inclusive = pd.Timestamp(DATE_RANGE_END).replace(hour=23, minute=59, second=59)
+                if date_range_end is not None:
+                    if date_range_end.hour == 0 and date_range_end.minute == 0 and date_range_end.second == 0:
+                        end_date_inclusive = pd.Timestamp(date_range_end).replace(hour=23, minute=59, second=59)
                     else:
-                        end_date_inclusive = pd.Timestamp(DATE_RANGE_END)
+                        end_date_inclusive = pd.Timestamp(date_range_end)
                     
                     df = df[df['FechaTurno'] <= end_date_inclusive]
                 
                 df = df.dropna(subset=['FechaTurno'])
                 filtered_count = len(df)
                 self.log("info", f"Filtro aplicado: {original_count} registros originales -> {filtered_count} registros filtrados")
+            else:
+                self.log("info", "Sin filtro de fecha - procesando todos los registros")
             
             if 'Procesado' not in df.columns:
                 self.log("info", "Agregando columna 'Procesado' al DataFrame")

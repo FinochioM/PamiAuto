@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from config import *
 
 class SettingsManager:
@@ -10,6 +11,10 @@ class SettingsManager:
             "screenshot_dir": SCREENSHOT_DIR,
             "downloads_dir": DOWNLOADS_DIR,
             "logs_dir": "logs",
+            "date_range_start_enabled": True,
+            "date_range_start": "2025-08-01 07:24:00",
+            "date_range_end_enabled": True,
+            "date_range_end": "2025-08-01 07:25:00",
         }
         self.settings = self.load_settings()
     
@@ -77,3 +82,43 @@ class SettingsManager:
     def set_logs_dir(self, directory):
         """Set logs directory"""
         self.set("logs_dir", directory)
+        
+    def get_date_range_start(self):
+        """Get date range start as datetime object or None if disabled"""
+        if not self.get("date_range_start_enabled"):
+            return None
+        try:
+            date_str = self.get("date_range_start")
+            return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except:
+            return None
+        
+    def set_date_range_start(self, date_time, enabled=True):
+        """Set date range start"""
+        self.set("date_range_start_enabled", enabled)
+        if date_time and enabled:
+            self.set("date_range_start", date_time.strftime("%Y-%m-%d %H:%M:%S"))
+            
+    def get_date_range_end(self):
+        """Get date range end as datetime or None if disabled"""
+        if not self.get("date_range_end_enabled"):
+            return None
+        try:
+            date_str = self.get("date_range_end")
+            return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except:
+            return None
+        
+    def set_date_range_end(self, date_time, enabled=True):
+        """set date range end"""
+        self.set("date_range_end_enabled", enabled)
+        if date_time and enabled:
+            self.set("date_range_end", date_time.strftime("%Y-%m-%d %H:%M:%S"))
+            
+    def is_date_range_start_enabled(self):
+        """Check if date range start is enabled"""
+        return self.get("date_range_start_enabled")
+    
+    def is_date_range_end_enabled(self):
+        """Check if date range end is enabled"""
+        return self.get("date_range_and_enabled")

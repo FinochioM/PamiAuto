@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QSpinBox, QGroupBox, QMessageBox,
-                             QLineEdit, QFileDialog)
-from PyQt6.QtCore import Qt
+                             QLineEdit, QFileDialog, QDateTimeEdit, QCheckBox)
+from PyQt6.QtCore import Qt, QDateTime
 import os
+import datetime
 
 class SettingsWindow(QDialog):
     def __init__(self, settings_manager, parent=None):
@@ -45,6 +46,42 @@ class SettingsWindow(QDialog):
         
         browser_group.setLayout(browser_layout)
         layout.addWidget(browser_group)
+        
+        date_group = QGroupBox("Filtro de Rango de Fechas")
+        date_layout = QVBoxLayout()
+        
+        start_layout = QHBoxLayout()
+        self.start_enabled_checkbox = QCheckBox("Fecha de inicio:")
+        self.start_enabled_checkbox.stateChanged.connect(self.on_start_enabled_changed)
+        self.start_datetime = QDateTimeEdit()
+        self.start_datetime.setDisplayFormat("yyyy-MM-dd hh:mm:ss")
+        self.start_datetime.setDateTime(QDateTime.currentDateTime())
+        
+        start_layout.addWidget(self.start_enabled_checkbox)
+        start_layout.addWidget(self.start_datetime)
+        start_layout.addStretch()
+        
+        date_layout.addLayout(start_layout)
+      
+        end_layout = QHBoxLayout()
+        self.end_enabled_checkbox = QCheckBox("Fecha de fin:")
+        self.end_enabled_checkbox.stateChanged.connect(self.on_end_enabled_changed)
+        self.end_datetime = QDateTimeEdit()
+        self.end_datetime.setDisplayFormat("yyyy-MM-dd hh:mm:ss")
+        self.end_datetime.setDateTime(QDateTime.currentDateTime())
+        
+        end_layout.addWidget(self.end_enabled_checkbox)
+        end_layout.addWidget(self.end_datetime)
+        end_layout.addStretch()
+        
+        date_layout.addLayout(end_layout)
+        
+        date_help_label = QLabel("Desmarca las casillas para procesar todos los registros sin filtro de fecha.\nSi solo marcas una fecha, se aplicará como límite único.")
+        date_help_label.setStyleSheet("color: #666; font-size: 11px; font-style: italic;")
+        date_layout.addWidget(date_help_label)
+        
+        date_group.setLayout(date_layout)
+        layout.addWidget(date_group)
         
         dirs_group = QGroupBox("Configuración de Directorios")
         dirs_layout = QVBoxLayout()
@@ -175,6 +212,22 @@ class SettingsWindow(QDialog):
         self.screenshot_dir_input.setText(self.settings_manager.get_screenshot_dir())
         self.downloads_dir_input.setText(self.settings_manager.get_downloads_dir())
         self.logs_dir_input.setText(self.settings_manager.get_logs_dir())
+        
+        start_enabled = self.settings_manager.is_date_range_start_enabled()
+        self.start_enabled_checkbox.setChecked(start_enabled)
+        self.start_datetime.setEnabled(start_enabled)
+        
+        start_date = self.settings_manager.get_date_range_start()
+        if start_date:
+            self.start_datetime.setDateTime(QDateTime.fromSecsSinceEpoch(int(start_date.timestamp())))
+        
+        end_enabled = self.settings_manager.is_date_range_end_enabled()
+        self.end_enabled_checkbox.setChecked(end_enabled)
+        self.end_datetime.setEnabled(end_enabled)
+        
+        end_date = self.settings_manager.get_date_range_end()
+        if end_date:
+            self.end_datetime.setDateTime(QDateTime.fromSecsSinceEpoch(int(end_date.timestamp())))
     
     def browse_screenshot_dir(self):
         """Open folder dialog to select screenshot directory"""
@@ -216,9 +269,23 @@ class SettingsWindow(QDialog):
             self.settings_manager.set_downloads_dir(self.downloads_dir_input.text())
             self.settings_manager.set_logs_dir(self.logs_dir_input.text())
             
+            start_enabled = self.start_enabled_checkbox.isChecked()
+            start_datetime = None
+            if start_enabled:
+                qt_datetime = self.start_datetime.dateTime()
+                start_datetime = datetime.fromtimestamp(qt_datetime.toSecsSinceEpoch())
+            self.settings_manager.set_date_range_start(start_datetime, start_enabled)
+            
+            end_enabled = self.end_enabled_checkbox.isChecked()
+            end_datetime = None
+            if end_enabled:
+                qt_datetime = self.end_datetime.dateTime()
+                end_datetime = datetime.fromtimestamp(qt_datetime.toSecsSinceEpoch())
+            self.settings_manager.set_date_range_end(end_datetime, end_enabled)
+            
             if self.settings_manager.save_settings():
                 QMessageBox.information(self, "Configuración", 
-                                      "Configuración guardada exitosamente.\n\nLos cambios se aplicarán en la próxima ejecución.")
+                                      "Configuración guardada exitosamente.\n\nLos cambios se aplicarán inmediatamente.")
                 self.accept()
             else:
                 QMessageBox.critical(self, "Error", "Error guardando la configuración.")
@@ -236,6 +303,14 @@ class SettingsWindow(QDialog):
             self.screenshot_dir_input.setText("screenshots")
             self.downloads_dir_input.setText("downloads")
             self.logs_dir_input.setText("logs")
+            
+            self.start_enabled_checkbox.setChecked(True)
+            self.end_enabled_checkbox.setChecked(True)
+            current_time = QDateTime.currentDateTime()
+            self.start_datetime.setDateTime(current_time)
+            self.end_datetime.setDateTime(current_time)
+            self.start_datetime.setEnabled(True)
+            self.end_datetime.setEnabled(True)
 
     def browse_logs_dir(self):
         """Open folder dialog to select logs directory"""
@@ -251,3 +326,11 @@ class SettingsWindow(QDialog):
         
         if directory:
             self.logs_dir_input.setText(directory)
+            
+    def on_start_enabled_changed(self):
+        """Enable/disable start datetime picker"""
+        self.start_datetime.setEnabled(self.start_enabled_checkbox.isChecked())
+    
+    def on_end_enabled_changed(self):
+        """Enable/disable end datetime picker"""
+        self.end_datetime.setEnabled(self.end_enabled_checkbox.isChecked())
