@@ -161,6 +161,24 @@ class BrowserAutomation:
             data = sheet.get_all_records()
             df = pd.DataFrame(data)
             
+            all_values = sheet.get_all_values()
+            header_row = all_values[0] if all_values else []
+            
+            if 'Procesado' not in header_row:
+                self.log("info", "Agregando columna 'Procesado' a Google Sheets")
+                procesado_col = len(header_row) + 1
+                sheet.update_cell(1, procesado_col, 'Procesado')
+                
+                if len(all_values) > 1:
+                    for row_idx in range(2, len(all_values) + 1):
+                        sheet.update_cell(row_idx, procesado_col, 'No')
+                
+                data = sheet.get_all_records()
+                df = pd.DataFrame(data)
+                self.log("info", "Columna 'Procesado' agregada exitosamente a Google Sheets")
+            else:
+                self.log("info", "La columna 'Procesado' ya existe en Google Sheets")
+            
             df['_original_sheet_row'] = df.index + 2
             
             if self.settings_manager:
@@ -193,13 +211,11 @@ class BrowserAutomation:
             else:
                 self.log("info", "Sin filtro de fecha - procesando todos los registros")
             
-            if 'Procesado' not in df.columns:
-                self.log("info", "Agregando columna 'Procesado' al DataFrame")
-                df['Procesado'] = 'No'
-            else:
-                self.log("info", "La columna 'Procesado' ya existe")
+            if 'Procesado' in df.columns:
                 df['Procesado'] = df['Procesado'].fillna('No')
                 df.loc[df['Procesado'].isin(['', None, 0]), 'Procesado'] = 'No'
+            else:
+                df['Procesado'] = 'No'
             
             self.google_sheet = sheet
             self.google_df = df
@@ -833,32 +849,17 @@ class BrowserAutomation:
         try:
             sheet_row_number = self.original_sheet_rows[case_index]
             
-            try:
-                all_values = self.google_sheet.get_all_values()
-                header_row = all_values[0] if all_values else []
-                
-                if 'Procesado' in header_row:
-                    procesado_col = header_row.index('Procesado') + 1
-                    self.log("info", f"Columna 'Procesado' encontrada en posición {procesado_col}")
-                else:
-                    procesado_col = len(header_row) + 1
-                    self.google_sheet.update_cell(1, procesado_col, 'Procesado')
-                    self.log("info", f"Columna 'Procesado' agregada en posición {procesado_col}")
-                    
-                    if len(all_values) > 1:
-                        for row_idx in range(2, len(all_values) + 1):
-                            if row_idx != sheet_row_number:
-                                self.google_sheet.update_cell(row_idx, procesado_col, 'No')
+            all_values = self.google_sheet.get_all_values()
+            header_row = all_values[0] if all_values else []
+            
+            if 'Procesado' in header_row:
+                procesado_col = header_row.index('Procesado') + 1 
                 
                 self.google_sheet.update_cell(sheet_row_number, procesado_col, 'Si')
                 
                 self.log("info", f"Caso en fila {sheet_row_number} marcado como procesado en Google Sheets")
-                
-            except Exception as sheet_error:
-                self.log("error", f"Error actualizando Google Sheets: {str(sheet_error)}")
-                case_data = self.excel_data[case_index]
-                ndo = case_data.get('NDO', '')
-                self.log("warning", f"Intentando método alternativo para NDO {ndo}")
+            else:
+                self.log("error", f"Columna 'Procesado' no encontrada en Google Sheets")
                 
         except Exception as e:
             self.log("error", f"Error actualizando caso como procesado: {str(e)}")
