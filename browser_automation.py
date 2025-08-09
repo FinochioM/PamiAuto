@@ -235,8 +235,6 @@ class BrowserAutomation:
             unprocessed_df = df[df['Procesado'] == 'No']
             self.excel_data = unprocessed_df.to_dict('records')
             
-            self.original_sheet_rows = unprocessed_df['_original_sheet_row'].tolist()
-            
             total_cases = len(df)
             processed_cases = len(already_processed_df)
             unprocessed_cases = len(self.excel_data)
@@ -314,6 +312,7 @@ class BrowserAutomation:
                         'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'Resultados': 0
                     })
+                    self.update_case_as_failed(index)
                     continue
 
                 # verificar si coinciden los datos del excel con los de la tabla ('COD' en excel con 'Practica' en tabla)
@@ -346,20 +345,30 @@ class BrowserAutomation:
                             self.log("info", f"NDO {ndo}: Caso ya procesado o validacion manual pendiente - Marcando como completado.")
                             status_message = f'Ya estaba procesado o falta validacion manual - COD {cod_excel}'
                             button_status_desc = 'Already processed or manual validation missing'
+                            
+                            failed_rows.append({
+                                'NDO': ndo,
+                                'Status': status_message,
+                                'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                'Resultados': len(table_data),
+                                'COD_Encontrado': cod_excel,
+                                'Button_Status': button_status_desc
+                            })
+                            self.update_case_as_failed(index)
                         else:
                             self.log("info", f"NDO {ndo}: Caso ya completado y aceptado - Marcando como completado.")
                             status_message = f'Ya estaba completado y aceptado - COD {cod_excel}'
                             button_status_desc = 'Already completed and accepted'
-                        
-                        processed_rows.append({
-                            'NDO': ndo,
-                            'Status': status_message,
-                            'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            'Resultados': len(table_data),
-                            'COD_Encontrado': cod_excel,
-                            'Button_Status': button_status_desc
-                        })
-                        self.update_case_as_processed(index)
+                            
+                            processed_rows.append({
+                                'NDO': ndo,
+                                'Status': status_message,
+                                'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                'Resultados': len(table_data),
+                                'COD_Encontrado': cod_excel,
+                                'Button_Status': button_status_desc
+                            })
+                            self.update_case_as_processed(index)
                     elif button_status == "needs_upload":
                         self.log("info", f"NDO {ndo}: Boton de carga azul encontrado - Verificando estado de carga.")
                         upload_status, upload_error_screenshot = self.check_upload_button_status(ndo, matching_row)
@@ -494,6 +503,7 @@ class BrowserAutomation:
                         'COD_Buscado': cod_excel,
                         'Resultados_Tabla': len(table_data)
                     })
+                    self.update_case_as_failed(index)
             except Exception as e:
                 screenshot_path = self.take_screenshot(f"error_ndo_{ndo}")
                 error_msg = f"NDO {ndo}: Error en procesamiento - {str(e)}"
@@ -891,38 +901,77 @@ class BrowserAutomation:
             
     def update_case_as_processed(self, case_index):
         try:
-            sheet_row_number = self.original_sheet_rows[case_index]
+            case_data = self.excel_data[case_index]
+            ndo_to_update = case_data.get('NDO')
             
+            if not ndo_to_update:
+                self.log("error", f"No NDO found for case index {case_index}")
+                return
+            
+            current_data = self.google_sheet.get_all_records()
             all_values = self.google_sheet.get_all_values()
             header_row = all_values[0] if all_values else []
             
-            if 'Procesado' in header_row:
-                procesado_col = header_row.index('Procesado') + 1 
+            if 'Procesado' not in header_row:
+                self.log("error", "Columna 'Procesado' no encontrada en Google Sheets")
+                return
                 
-                self.google_sheet.update_cell(sheet_row_number, procesado_col, 'Si')
-                
-                self.log("info", f"Caso en fila {sheet_row_number} marcado como procesado en Google Sheets")
-            else:
-                self.log("error", f"Columna 'Procesado' no encontrada en Google Sheets")
-                
+            procesado_col = header_row.index('Procesado') + 1
+            
+            target_row = None
+            for i, record in enumerate(current_data):
+                if str(record.get('NDO', '')) == str(ndo_to_update):
+                    target_row = i + 2 
+                    break
+            
+            if target_row is None:
+                self.log("error", f"No se encontró NDO {ndo_to_update} en la hoja actual")
+                return
+            
+            current_value = self.google_sheet.cell(target_row, procesado_col).value
+            if current_value == 'Si':
+                self.log("warning", f"NDO {ndo_to_update} ya estaba marcado como procesado")
+                return
+            
+            self.google_sheet.update_cell(target_row, procesado_col, 'Si')
+            
+            self.log("info", f"NDO {ndo_to_update} marcado como procesado en fila {target_row} de Google Sheets")
+            
         except Exception as e:
             self.log("error", f"Error actualizando caso como procesado: {str(e)}")
             
     def update_case_as_failed(self, case_index):
         try:
-            sheet_row_number = self.original_sheet_rows[case_index]
+            case_data = self.excel_data[case_index]
+            ndo_to_update = case_data.get('NDO')
             
+            if not ndo_to_update:
+                self.log("error", f"No NDO found for case index {case_index}")
+                return
+            
+            current_data = self.google_sheet.get_all_records()
             all_values = self.google_sheet.get_all_values()
             header_row = all_values[0] if all_values else []
             
-            if 'Procesado' in header_row:
-                procesado_col = header_row.index('Procesado') + 1
+            if 'Procesado' not in header_row:
+                self.log("error", "Columna 'Procesado' no encontrada en Google Sheets")
+                return
                 
-                self.google_sheet.update_cell(sheet_row_number, procesado_col, 'No')
-                
-                self.log("info", f"Caso en fila {sheet_row_number} marcado como NO procesado en Google Sheets")
-            else:
-                self.log("error", f"Columna 'Procesado' no encontrada en Google Sheets")
-                
+            procesado_col = header_row.index('Procesado') + 1
+            
+            target_row = None
+            for i, record in enumerate(current_data):
+                if str(record.get('NDO', '')) == str(ndo_to_update):
+                    target_row = i + 2
+                    break
+            
+            if target_row is None:
+                self.log("error", f"No se encontró NDO {ndo_to_update} en la hoja actual")
+                return
+            
+            self.google_sheet.update_cell(target_row, procesado_col, 'No')
+            
+            self.log("info", f"NDO {ndo_to_update} marcado como NO procesado en fila {target_row} de Google Sheets")
+            
         except Exception as e:
             self.log("error", f"Error actualizando caso como no procesado: {str(e)}")
