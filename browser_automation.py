@@ -341,16 +341,25 @@ class BrowserAutomation:
                     
                     button_status, error_screenshot = self.check_button_status(ndo, matching_row)
                     
-                    if button_status == "processed":
-                        self.log("info", f"NDO {ndo}: Caso ya procesado o validacion manual pendiente - Marcando como completado.")
+                    if button_status == "processed" or button_status == "already_completed":
+                        if button_status == "processed":
+                            self.log("info", f"NDO {ndo}: Caso ya procesado o validacion manual pendiente - Marcando como completado.")
+                            status_message = f'Ya estaba procesado o falta validacion manual - COD {cod_excel}'
+                            button_status_desc = 'Already processed or manual validation missing'
+                        else:
+                            self.log("info", f"NDO {ndo}: Caso ya completado y aceptado - Marcando como completado.")
+                            status_message = f'Ya estaba completado y aceptado - COD {cod_excel}'
+                            button_status_desc = 'Already completed and accepted'
+                        
                         processed_rows.append({
                             'NDO': ndo,
-                            'Status': f'Ya estaba procesado o falta validacion manual - COD {cod_excel}',
+                            'Status': status_message,
                             'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             'Resultados': len(table_data),
                             'COD_Encontrado': cod_excel,
-                            'Button_Status': 'Already processed or manual validation missing'
+                            'Button_Status': button_status_desc
                         })
+                        self.update_case_as_processed(index)
                     elif button_status == "needs_upload":
                         self.log("info", f"NDO {ndo}: Boton de carga azul encontrado - Verificando estado de carga.")
                         upload_status, upload_error_screenshot = self.check_upload_button_status(ndo, matching_row)
@@ -472,6 +481,7 @@ class BrowserAutomation:
                             'Resultados_Tabla': len(table_data),
                             'Button_Status': button_status
                         }
+                        self.update_case_as_failed(index)
                         if error_screenshot:
                             failed_row_data['Screenshot'] = error_screenshot
                         failed_rows.append(failed_row_data)
@@ -496,6 +506,8 @@ class BrowserAutomation:
                     'Error': str(e),
                     'Screenshot': screenshot_path if screenshot_path else 'No se pudo tomar screenshot'
                 })
+                
+                self.update_case_as_failed(index)
 
         self.processed_rows = processed_rows
         self.failed_rows = failed_rows
@@ -568,30 +580,33 @@ class BrowserAutomation:
             
             button_selector = f"{row_selector} .boton-historial.fas.fa-check"
 
-            self.new_page.wait_for_selector(button_selector, state="visible", timeout=5000)
-            
-            button = self.new_page.query_selector(button_selector)
-            
-            if not button:
-                self.log("error", f"NDO {ndo}: No se encontro el boton de validacion.")
-                return "unknown", None
-            
-            classes = button.get_attribute("class")
-            
-            if "btn-success" in classes:
-                self.log("info", f"NDO {ndo}: Boton verde - Validacion manual no realizada.")
-                return "processed", None
-            elif "btn-primary" in classes:
-                self.log("info", f"NDO {ndo}: Boton azul - Requiere carga de archivo.")
-                return "needs_upload", None
-            else:
-                bg_color = self.new_page.evaluate("(elements) => window.getComputedStyle(element).backgroundColor", button)
-                self.log("info", f"NDO {ndo}: Color de fondo del boton: {bg_color}")
-                return "unknown", None
+            try:
+                self.new_page.wait_for_selector(button_selector, state="visible", timeout=5000)
+                button = self.new_page.query_selector(button_selector)
+                
+                if not button:
+                    self.log("info", f"NDO {ndo}: No se encontró el botón de validación - Caso ya procesado y aceptado")
+                    return "already_completed", None
+                
+                classes = button.get_attribute("class")
+                
+                if "btn-success" in classes:
+                    self.log("info", f"NDO {ndo}: Botón verde - Validación manual no realizada")
+                    return "processed", None
+                elif "btn-primary" in classes:
+                    self.log("info", f"NDO {ndo}: Botón azul - Requiere carga de archivo")
+                    return "needs_upload", None
+                else:
+                    self.log("info", f"NDO {ndo}: Estado del botón no reconocido - Asumiendo ya procesado")
+                    return "already_completed", None
+                    
+            except Exception as selector_error:
+                self.log("info", f"NDO {ndo}: No se pudo encontrar botón de validación - Caso ya procesado y aceptado")
+                return "already_completed", None
                 
         except Exception as e:
             screenshot_path = self.take_screenshot(f"button_check_error_ndo_{ndo}")
-            self.log("error", f"NDO {ndo}: Error verificando estado del boton: {str(e)}", screenshot_path)
+            self.log("error", f"NDO {ndo}: Error verificando estado del botón: {str(e)}", screenshot_path)
             return "error", screenshot_path
                 
     def check_upload_button_status(self, ndo, matching_row_data):
@@ -892,3 +907,22 @@ class BrowserAutomation:
                 
         except Exception as e:
             self.log("error", f"Error actualizando caso como procesado: {str(e)}")
+            
+    def update_case_as_failed(self, case_index):
+        try:
+            sheet_row_number = self.original_sheet_rows[case_index]
+            
+            all_values = self.google_sheet.get_all_values()
+            header_row = all_values[0] if all_values else []
+            
+            if 'Procesado' in header_row:
+                procesado_col = header_row.index('Procesado') + 1
+                
+                self.google_sheet.update_cell(sheet_row_number, procesado_col, 'No')
+                
+                self.log("info", f"Caso en fila {sheet_row_number} marcado como NO procesado en Google Sheets")
+            else:
+                self.log("error", f"Columna 'Procesado' no encontrada en Google Sheets")
+                
+        except Exception as e:
+            self.log("error", f"Error actualizando caso como no procesado: {str(e)}")
