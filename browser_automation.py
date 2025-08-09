@@ -310,7 +310,7 @@ class BrowserAutomation:
 
                 if not table_data:
                     self.log("warning", f"NDO {ndo}: No se encontraron datos en la tabla.")
-                    processed_rows.append({
+                    failed_rows.append({
                         'NDO': ndo,
                         'Status': 'No se encontraron datos en la tabla.',
                         'Timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -392,6 +392,7 @@ class BrowserAutomation:
                                     'Button_Status': button_status,
                                     'Upload_Status': 'No informe URL'
                                 })
+                                self.update_case_as_failed(index)
                                 continue
                                                     
                             upload_result = self.handle_file_upload_modal(ndo, matching_row, informe_url)
@@ -428,6 +429,7 @@ class BrowserAutomation:
                                     if transmit_error_screenshot:
                                         failed_row_data['Screenshot'] = transmit_error_screenshot
                                     failed_rows.append(failed_row_data)
+                                    self.update_case_as_failed(index)
                             else:
                                 self.log("error", f"NDO {ndo}: Upload result no es True: {upload_result}")
                                 error_screenshot = upload_result[1] if isinstance(upload_result, tuple) else None
@@ -443,6 +445,7 @@ class BrowserAutomation:
                                 if error_screenshot:
                                     failed_row_data['Screenshot'] = error_screenshot
                                 failed_rows.append(failed_row_data)
+                                self.update_case_as_failed(index)
                         elif upload_status == "file_already_uploaded":
                             self.log("info", f"NDO {ndo}: Archivo ya subido - Trasmitiendo.")
                             transmit_result, transmit_error_screenshot = self.check_and_transmit(ndo, matching_row)
@@ -470,6 +473,7 @@ class BrowserAutomation:
                                 if transmit_error_screenshot:
                                     failed_row_data['Screenshot'] = transmit_error_screenshot
                                 failed_rows.append(failed_row_data)
+                                self.update_case_as_failed(index)
                         else:
                             self.log("warning", f"NDO {ndo}: Estado del botón de carga no pudo ser determinado.")
                             failed_row_data = {
@@ -484,6 +488,7 @@ class BrowserAutomation:
                             if upload_error_screenshot:
                                 failed_row_data['Screenshot'] = upload_error_screenshot
                             failed_rows.append(failed_row_data)
+                            self.update_case_as_failed(index)
                     else:
                         self.log("warning", f"NDO {ndo}: Estado del boton no pudo ser determinado.")
                         failed_row_data = {
@@ -498,6 +503,7 @@ class BrowserAutomation:
                         if error_screenshot:
                             failed_row_data['Screenshot'] = error_screenshot
                         failed_rows.append(failed_row_data)
+                        self.update_case_as_failed(index)
                 else:
                     self.log("warning", f"NDO {ndo}: COD {cod_excel} no encontrado en ninguna fila de la tabla")
                     failed_rows.append({

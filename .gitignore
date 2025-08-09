@@ -5,3 +5,6 @@ screenshots/
 downloads/
 /credenciales_bio_sheets.json
 /user_settings.json
+build/
+dist/
+dist.rar

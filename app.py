@@ -1,4 +1,5 @@
 import sys
+import os
 import threading
 from PyQt6 import uic
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
@@ -9,6 +10,14 @@ from logs_window import LogsWindow
 from settings_manager import SettingsManager
 from settings_window import SettingsWindow
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class WorkerSignals(QObject):
     status_update = pyqtSignal(str, str)
     error_occurred = pyqtSignal(str)
@@ -17,7 +26,14 @@ class WorkerSignals(QObject):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi(r"..\PamiAuto\ui\main.ui", self)
+        try:
+            ui_file = resource_path("ui/main.ui")
+            if not os.path.exists(ui_file):
+                ui_file = r"ui\main.ui"
+            uic.loadUi(ui_file, self)
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"No se pudo cargar la interfaz: {str(e)}")
+            sys.exit(1)
         
         self.settings_manager = SettingsManager()
         
@@ -141,6 +157,10 @@ class MainWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    
+    app.setApplicationName("Pami Automation")
+    app.setApplicationVersion("1.0")
+    app.setOrganizationName("Bioimagenes")
     
     window = MainWindow()
     window.show()
