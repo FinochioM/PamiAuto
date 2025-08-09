@@ -903,9 +903,10 @@ class BrowserAutomation:
         try:
             case_data = self.excel_data[case_index]
             ndo_to_update = case_data.get('NDO')
+            cod_to_update = case_data.get('CODIGO_PAMI')
             
-            if not ndo_to_update:
-                self.log("error", f"No NDO found for case index {case_index}")
+            if not ndo_to_update or not cod_to_update:
+                self.log("error", f"No NDO or COD found for case index {case_index}")
                 return
             
             current_data = self.google_sheet.get_all_records()
@@ -920,58 +921,59 @@ class BrowserAutomation:
             
             target_row = None
             for i, record in enumerate(current_data):
-                if str(record.get('NDO', '')) == str(ndo_to_update):
-                    target_row = i + 2 
-                    break
-            
-            if target_row is None:
-                self.log("error", f"No se encontró NDO {ndo_to_update} en la hoja actual")
-                return
-            
-            current_value = self.google_sheet.cell(target_row, procesado_col).value
-            if current_value == 'Si':
-                self.log("warning", f"NDO {ndo_to_update} ya estaba marcado como procesado")
-                return
-            
-            self.google_sheet.update_cell(target_row, procesado_col, 'Si')
-            
-            self.log("info", f"NDO {ndo_to_update} marcado como procesado en fila {target_row} de Google Sheets")
-            
-        except Exception as e:
-            self.log("error", f"Error actualizando caso como procesado: {str(e)}")
-            
-    def update_case_as_failed(self, case_index):
-        try:
-            case_data = self.excel_data[case_index]
-            ndo_to_update = case_data.get('NDO')
-            
-            if not ndo_to_update:
-                self.log("error", f"No NDO found for case index {case_index}")
-                return
-            
-            current_data = self.google_sheet.get_all_records()
-            all_values = self.google_sheet.get_all_values()
-            header_row = all_values[0] if all_values else []
-            
-            if 'Procesado' not in header_row:
-                self.log("error", "Columna 'Procesado' no encontrada en Google Sheets")
-                return
-                
-            procesado_col = header_row.index('Procesado') + 1
-            
-            target_row = None
-            for i, record in enumerate(current_data):
-                if str(record.get('NDO', '')) == str(ndo_to_update):
+                if (str(record.get('NDO', '')) == str(ndo_to_update) and 
+                    str(record.get('CODIGO_PAMI', '')) == str(cod_to_update)):
                     target_row = i + 2
                     break
             
             if target_row is None:
-                self.log("error", f"No se encontró NDO {ndo_to_update} en la hoja actual")
+                self.log("error", f"No se encontró NDO {ndo_to_update} con COD {cod_to_update} en la hoja actual")
+                return
+            
+            current_value = self.google_sheet.cell(target_row, procesado_col).value
+            if current_value == 'Si':
+                self.log("warning", f"NDO {ndo_to_update} COD {cod_to_update} ya estaba marcado como procesado")
+                return
+            
+            self.google_sheet.update_cell(target_row, procesado_col, 'Si')
+            self.log("info", f"NDO {ndo_to_update} COD {cod_to_update} marcado como procesado en fila {target_row}")
+            
+        except Exception as e:
+            self.log("error", f"Error actualizando caso como procesado: {str(e)}")
+
+    def update_case_as_failed(self, case_index):
+        try:
+            case_data = self.excel_data[case_index]
+            ndo_to_update = case_data.get('NDO')
+            cod_to_update = case_data.get('CODIGO_PAMI')
+            
+            if not ndo_to_update or not cod_to_update:
+                self.log("error", f"No NDO or COD found for case index {case_index}")
+                return
+            
+            current_data = self.google_sheet.get_all_records()
+            all_values = self.google_sheet.get_all_values()
+            header_row = all_values[0] if all_values else []
+            
+            if 'Procesado' not in header_row:
+                self.log("error", "Columna 'Procesado' no encontrada en Google Sheets")
+                return
+                
+            procesado_col = header_row.index('Procesado') + 1
+            
+            target_row = None
+            for i, record in enumerate(current_data):
+                if (str(record.get('NDO', '')) == str(ndo_to_update) and 
+                    str(record.get('CODIGO_PAMI', '')) == str(cod_to_update)):
+                    target_row = i + 2
+                    break
+            
+            if target_row is None:
+                self.log("error", f"No se encontró NDO {ndo_to_update} con COD {cod_to_update} en la hoja actual")
                 return
             
             self.google_sheet.update_cell(target_row, procesado_col, 'No')
-            
-            self.log("info", f"NDO {ndo_to_update} marcado como NO procesado en fila {target_row} de Google Sheets")
+            self.log("info", f"NDO {ndo_to_update} COD {cod_to_update} marcado como NO procesado en fila {target_row}")
             
         except Exception as e:
             self.log("error", f"Error actualizando caso como no procesado: {str(e)}")
