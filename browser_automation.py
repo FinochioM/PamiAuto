@@ -154,10 +154,14 @@ class BrowserAutomation:
             scope = ['https://spreadsheets.google.com/feeds',
                     'https://www.googleapis.com/auth/drive']
             
-            creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scope)
+            service_account_file = self.settings_manager.get_service_account_file() if self.settings_manager else SERVICE_ACCOUNT_FILE
+            sheets_id = self.settings_manager.get_google_sheets_id() if self.settings_manager else GOOGLE_SHEETS_ID
+            worksheet_name = self.settings_manager.get_worksheet_name() if self.settings_manager else WORKSHEET_NAME
+            
+            creds = Credentials.from_service_account_file(service_account_file, scopes=scope)
             client = gspread.authorize(creds)
             
-            sheet = client.open_by_key(GOOGLE_SHEETS_ID).worksheet(WORKSHEET_NAME)
+            sheet = client.open_by_key(sheets_id).worksheet(worksheet_name)
             
             data = sheet.get_all_records()
             df = pd.DataFrame(data)

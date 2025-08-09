@@ -15,6 +15,10 @@ class SettingsManager:
             "date_range_start": "2025-08-01 07:24:00",
             "date_range_end_enabled": True,
             "date_range_end": "2025-08-01 07:25:00",
+            "service_account_file": SERVICE_ACCOUNT_FILE,
+            "worksheet_name": WORKSHEET_NAME,
+            "google_sheets_url": GOOGLE_SHEETS_URL,
+            "google_sheets_id": GOOGLE_SHEETS_ID,
         }
         self.settings = self.load_settings()
     
@@ -122,3 +126,35 @@ class SettingsManager:
     def is_date_range_end_enabled(self):
         """Check if date range end is enabled"""
         return self.get("date_range_end_enabled")
+    
+    def get_service_account_file(self):
+        """Get service account file path"""
+        return self.get("service_account_file")
+
+    def set_service_account_file(self, file_path):
+        """Set service account file path"""
+        self.set("service_account_file", file_path)
+
+    def get_worksheet_name(self):
+        """Get worksheet name"""
+        return self.get("worksheet_name")
+
+    def set_worksheet_name(self, name):
+        """Set worksheet name"""
+        self.set("worksheet_name", name)
+
+    def get_google_sheets_url(self):
+        """Get Google Sheets URL"""
+        return self.get("google_sheets_url")
+
+    def set_google_sheets_url(self, url):
+        """Set Google Sheets URL"""
+        self.set("google_sheets_url", url)
+
+    def get_google_sheets_id(self):
+        """Get Google Sheets ID"""
+        return self.get("google_sheets_id")
+
+    def set_google_sheets_id(self, sheets_id):
+        """Set Google Sheets ID"""
+        self.set("google_sheets_id", sheets_id)

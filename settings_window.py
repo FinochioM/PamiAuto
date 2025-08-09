@@ -83,6 +83,60 @@ class SettingsWindow(QDialog):
         date_group.setLayout(date_layout)
         layout.addWidget(date_group)
         
+        sheets_group = QGroupBox("Configuración de Google Sheets")
+        sheets_layout = QVBoxLayout()
+        
+        service_account_layout = QHBoxLayout()
+        service_account_label = QLabel("Archivo de credenciales:")
+        self.service_account_input = QLineEdit()
+        self.service_account_input.setReadOnly(True)
+        service_account_browse_btn = QPushButton("Examinar")
+        service_account_browse_btn.clicked.connect(self.browse_service_account_file)
+        
+        service_account_layout.addWidget(service_account_label)
+        service_account_layout.addWidget(self.service_account_input)
+        service_account_layout.addWidget(service_account_browse_btn)
+        
+        sheets_layout.addLayout(service_account_layout)
+        
+        worksheet_layout = QHBoxLayout()
+        worksheet_label = QLabel("Nombre de la hoja:")
+        self.worksheet_name_input = QLineEdit()
+        self.worksheet_name_input.setPlaceholderText("prestaciones_PAMI")
+        
+        worksheet_layout.addWidget(worksheet_label)
+        worksheet_layout.addWidget(self.worksheet_name_input)
+        worksheet_layout.addStretch()
+        
+        sheets_layout.addLayout(worksheet_layout)
+        
+        url_layout = QHBoxLayout()
+        url_label = QLabel("URL de Google Sheets:")
+        self.sheets_url_input = QLineEdit()
+        self.sheets_url_input.setPlaceholderText("https://docs.google.com/spreadsheets/d/...")
+        
+        url_layout.addWidget(url_label)
+        url_layout.addWidget(self.sheets_url_input)
+        
+        sheets_layout.addLayout(url_layout)
+        
+        id_layout = QHBoxLayout()
+        id_label = QLabel("ID de Google Sheets:")
+        self.sheets_id_input = QLineEdit()
+        self.sheets_id_input.setPlaceholderText("16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk")
+        
+        id_layout.addWidget(id_label)
+        id_layout.addWidget(self.sheets_id_input)
+        
+        sheets_layout.addLayout(id_layout)
+        
+        sheets_help_label = QLabel("Cambiar la URL o ID requiere acceso al nuevo Google Sheets.\nSolo modifica estos valores si sabes lo que estás haciendo.")
+        sheets_help_label.setStyleSheet("color: #e67e22; font-size: 11px; font-style: italic;")
+        sheets_layout.addWidget(sheets_help_label)
+        
+        sheets_group.setLayout(sheets_layout)
+        layout.addWidget(sheets_group)
+        
         dirs_group = QGroupBox("Configuración de Directorios")
         dirs_layout = QVBoxLayout()
         
@@ -217,6 +271,11 @@ class SettingsWindow(QDialog):
         self.start_enabled_checkbox.setChecked(start_enabled)
         self.start_datetime.setEnabled(start_enabled)
         
+        self.service_account_input.setText(self.settings_manager.get_service_account_file())
+        self.worksheet_name_input.setText(self.settings_manager.get_worksheet_name())
+        self.sheets_url_input.setText(self.settings_manager.get_google_sheets_url())
+        self.sheets_id_input.setText(self.settings_manager.get_google_sheets_id())
+        
         start_date = self.settings_manager.get_date_range_start()
         if start_date:
             self.start_datetime.setDateTime(QDateTime.fromSecsSinceEpoch(int(start_date.timestamp())))
@@ -283,6 +342,11 @@ class SettingsWindow(QDialog):
                 end_datetime = datetime.fromtimestamp(qt_datetime.toSecsSinceEpoch())
             self.settings_manager.set_date_range_end(end_datetime, end_enabled)
             
+            self.settings_manager.set_service_account_file(self.service_account_input.text())
+            self.settings_manager.set_worksheet_name(self.worksheet_name_input.text())
+            self.settings_manager.set_google_sheets_url(self.sheets_url_input.text())
+            self.settings_manager.set_google_sheets_id(self.sheets_id_input.text())
+            
             if self.settings_manager.save_settings():
                 QMessageBox.information(self, "Configuración", 
                                       "Configuración guardada exitosamente.\n\nLos cambios se aplicarán inmediatamente.")
@@ -311,6 +375,11 @@ class SettingsWindow(QDialog):
             self.end_datetime.setDateTime(current_time)
             self.start_datetime.setEnabled(True)
             self.end_datetime.setEnabled(True)
+            
+            self.service_account_input.setText("credenciales_bio_sheets.json")
+            self.worksheet_name_input.setText("prestaciones_PAMI")
+            self.sheets_url_input.setText("https://docs.google.com/spreadsheets/d/16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk/edit?gid=438980283#gid=438980283&fvid=86172977")
+            self.sheets_id_input.setText("16r7nB5lPMLEmTEk7Np0knv-AUvBVIktdjA36Ya96JAk")
 
     def browse_logs_dir(self):
         """Open folder dialog to select logs directory"""
@@ -334,3 +403,21 @@ class SettingsWindow(QDialog):
     def on_end_enabled_changed(self):
         """Enable/disable end datetime picker"""
         self.end_datetime.setEnabled(self.end_enabled_checkbox.isChecked())
+    
+    def browse_service_account_file(self):
+        """Open file dialog to select service account JSON file"""
+        current_file = self.service_account_input.text()
+        if current_file and os.path.exists(current_file):
+            current_dir = os.path.dirname(current_file)
+        else:
+            current_dir = os.getcwd()
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar Archivo de Credenciales",
+            current_dir,
+            "JSON Files (*.json);;All Files (*)"
+        )
+        
+        if file_path:
+            self.service_account_input.setText(file_path)
