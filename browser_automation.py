@@ -61,12 +61,33 @@ class BrowserAutomation:
         self.playwright = sync_playwright().start()
 
         self.log("info", "Lanzando navegador Chromium")
-        self.browser = self.playwright.chromium.launch(headless=HEADLESS)
-
-        self.log("info", "Creando nueva página")
-        self.page = self.browser.new_page()
+        
+        try:
+            self.browser = self.playwright.chromium.launch(headless=HEADLESS)
+        except Exception as e:
+            if "Executable doesn't exist" in str(e):
+                self.log("info", "Navegadores no encontrados. Instalando automáticamente...")
+                try:
+                    from playwright._impl._driver import compute_driver_executable, get_driver_env
+                    import subprocess
+                    import os
+                    
+                    driver_executable = compute_driver_executable()
+                    env = get_driver_env()
+                    
+                    subprocess.run([str(driver_executable), "install", "chromium"], 
+                                check=True, env=env, capture_output=False)
+                    
+                    self.log("info", "Navegadores instalados exitosamente")
+                    self.browser = self.playwright.chromium.launch(headless=HEADLESS)
+                except Exception as install_error:
+                    self.log("error", f"Error instalando navegadores: {str(install_error)}")
+                    raise AutomationError("Failed to install browsers")
+            else:
+                raise e
 
         timeout = self.settings_manager.get_browser_timeout() if self.settings_manager else BROWSER_TIMEOUT
+        self.page = self.browser.new_page()
         self.page.set_default_timeout(timeout)
 
         self.log("info", f"Navegador iniciado correctamente (timeout: {timeout}ms)")
