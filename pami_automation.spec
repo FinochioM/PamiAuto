@@ -1,24 +1,70 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
 import subprocess
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
 block_cipher = None
 
-try:
-    playwright_data = collect_data_files('playwright')
-except:
-    playwright_data = []
+# Collect playwright data
+playwright_data = []
+playwright_bins = []
 
-# Define data files to include
+try:
+    import playwright
+    playwright_path = os.path.dirname(playwright.__file__)
+    
+    # Collect playwright package data
+    playwright_data = collect_data_files('playwright')
+    playwright_bins = collect_dynamic_libs('playwright')
+    
+    # Add driver files
+    driver_path = os.path.join(playwright_path, 'driver')
+    if os.path.exists(driver_path):
+        for root, dirs, files in os.walk(driver_path):
+            for file in files:
+                src = os.path.join(root, file)
+                dst = os.path.relpath(root, os.path.dirname(playwright_path))
+                playwright_data.append((src, dst))
+    
+    # Install browsers before building
+    print("Installing Playwright browsers...")
+    env = os.environ.copy()
+    env['PLAYWRIGHT_BROWSERS_PATH'] = '0'  # Use default location
+    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], 
+                   check=True, env=env)
+    
+    # Find and include browser files
+    home = os.path.expanduser("~")
+    browser_paths = [
+        os.path.join(home, "AppData", "Local", "ms-playwright"),
+        os.path.join(playwright_path, "driver", "package", ".local-browsers"),
+    ]
+    
+    for browser_path in browser_paths:
+        if os.path.exists(browser_path):
+            print(f"Found browsers at: {browser_path}")
+            for root, dirs, files in os.walk(browser_path):
+                for file in files:
+                    src = os.path.join(root, file)
+                    # Keep directory structure
+                    rel_path = os.path.relpath(src, browser_path)
+                    dst = os.path.join("playwright", "driver", "package", ".local-browsers", os.path.dirname(rel_path))
+                    playwright_data.append((src, dst))
+            break
+    
+except Exception as e:
+    print(f"Warning: Could not collect playwright files: {e}")
+
+# Define data files
 added_files = [
-    ('ui/main.ui', 'ui'),  # UI file
+    ('ui/main.ui', 'ui'),
 ]
 
-# Add playwright data
+# Add playwright files
 added_files.extend(playwright_data)
 
-# Add any existing image files from ui folder
+# Add image files
 image_files = [
     ('ui/Bioimagenes2.png', '.'),
     ('ui/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png', '.')
@@ -28,35 +74,10 @@ for img_file, dest in image_files:
     if os.path.exists(img_file):
         added_files.append((img_file, dest))
 
-# Install browsers before building
-try:
-    subprocess.run(["playwright", "install", "chromium"], check=True)
-    print("Playwright browsers installed")
-except:
-    print("Could not install browsers - may need manual installation")
-
-# Add playwright browsers to data files
-playwright_browsers = []
-try:
-    import playwright
-    playwright_path = os.path.dirname(playwright.__file__)
-    browsers_path = os.path.join(playwright_path, "driver", "package", ".local-browsers")
-    if os.path.exists(browsers_path):
-        for root, dirs, files in os.walk(browsers_path):
-            for file in files:
-                src = os.path.join(root, file)
-                dst = os.path.relpath(src, playwright_path)
-                playwright_browsers.append((src, os.path.join("playwright", dst)))
-except:
-    pass
-
-# Add to datas
-added_files.extend(playwright_browsers)
-
 a = Analysis(
     ['app.py'],
     pathex=[],
-    binaries=[],
+    binaries=playwright_bins,
     datas=added_files,
     hiddenimports=[
         'PyQt6',
@@ -66,6 +87,8 @@ a = Analysis(
         'PyQt6.uic',
         'playwright',
         'playwright.sync_api',
+        'playwright._impl._driver',
+        'playwright._impl._api_types',
         'gspread',
         'google.oauth2.service_account',
         'google.auth',
@@ -107,10 +130,10 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,  # Disable UPX compression for better compatibility
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,  # Set to True if you need console for debugging
+    console=True,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,

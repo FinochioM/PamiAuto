@@ -63,26 +63,42 @@ class BrowserAutomation:
         self.log("info", "Lanzando navegador Chromium")
         
         try:
+            import sys
+            if hasattr(sys, '_MEIPASS'):
+                browsers_path = os.path.join(sys._MEIPASS, 'playwright', 'driver', 'package', '.local-browsers')
+                if os.path.exists(browsers_path):
+                    os.environ['PLAYWRIGHT_BROWSERS_PATH'] = browsers_path
+                    self.log("info", f"Using bundled browsers from: {browsers_path}")
+            
             self.browser = self.playwright.chromium.launch(headless=HEADLESS)
+            
         except Exception as e:
             if "Executable doesn't exist" in str(e):
                 self.log("info", "Navegadores no encontrados. Instalando automáticamente...")
                 try:
-                    from playwright._impl._driver import compute_driver_executable, get_driver_env
                     import subprocess
-                    import os
+                    import sys
                     
-                    driver_executable = compute_driver_executable()
-                    env = get_driver_env()
+                    result = subprocess.run(
+                        [sys.executable, "-m", "playwright", "install", "chromium"],
+                        capture_output=True,
+                        text=True,
+                        timeout=300
+                    )
                     
-                    subprocess.run([str(driver_executable), "install", "chromium"], 
-                                check=True, env=env, capture_output=False)
+                    if result.returncode != 0:
+                        self.log("error", f"Error instalando navegadores: {result.stderr}")
+                        raise AutomationError(f"Failed to install browsers: {result.stderr}")
                     
                     self.log("info", "Navegadores instalados exitosamente")
                     self.browser = self.playwright.chromium.launch(headless=HEADLESS)
+                    
+                except subprocess.TimeoutExpired:
+                    self.log("error", "Timeout instalando navegadores")
+                    raise AutomationError("Browser installation timed out")
                 except Exception as install_error:
                     self.log("error", f"Error instalando navegadores: {str(install_error)}")
-                    raise AutomationError("Failed to install browsers")
+                    raise AutomationError(f"Failed to install browsers: {str(install_error)}")
             else:
                 raise e
 
