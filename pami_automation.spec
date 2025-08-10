@@ -59,20 +59,12 @@ except Exception as e:
 # Define data files
 added_files = [
     ('ui/main.ui', 'ui'),
+    ('ui/Bioimagenes2.png', '.'),  # Put images in root directory
+    ('ui/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png', '.')  # Put images in root directory
 ]
 
 # Add playwright files
 added_files.extend(playwright_data)
-
-# Add image files
-image_files = [
-    ('ui/Bioimagenes2.png', '.'),
-    ('ui/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png', '.')
-]
-
-for img_file, dest in image_files:
-    if os.path.exists(img_file):
-        added_files.append((img_file, dest))
 
 a = Analysis(
     ['app.py'],

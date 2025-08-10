@@ -4,6 +4,7 @@ import threading
 from PyQt6 import uic
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject
+from PyQt6.QtGui import QPixmap, QIcon
 from browser_automation import BrowserAutomation
 from logger import AutomationLogger
 from logs_window import LogsWindow
@@ -35,6 +36,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(None, "Error", f"No se pudo cargar la interfaz: {str(e)}")
             sys.exit(1)
         
+        self.load_images()
+        
         self.settings_manager = SettingsManager()
         
         self.automation = None
@@ -45,6 +48,28 @@ class MainWindow(QMainWindow):
         self.setup_signals()
         
         self.setup_initial_state()
+    
+    def load_images(self):
+        """Load images that couldn't be loaded from .ui file"""
+        try:
+            icon_path = resource_path("cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png")
+            if not os.path.exists(icon_path):
+                icon_path = "ui/cropped-cropped-iso-bioimagenes2-32x32-1-32x32.png"
+            
+            if os.path.exists(icon_path):
+                self.setWindowIcon(QIcon(icon_path))
+            
+            bg_image_path = resource_path("Bioimagenes2.png")
+            if not os.path.exists(bg_image_path):
+                bg_image_path = "ui/Bioimagenes2.png"
+            
+            if os.path.exists(bg_image_path):
+                pixmap = QPixmap(bg_image_path)
+                if not pixmap.isNull():
+                    self.backgrounImage.setPixmap(pixmap)
+                    self.backgrounImage.setScaledContents(True)
+        except Exception as e:
+            print(f"Warning: Could not load images: {str(e)}")
     
     def setup_connections(self):
         self.startAutomation.clicked.connect(self.start_automation_thread)
