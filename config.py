@@ -70,7 +70,7 @@ def column_number_to_letter(col_num):
     return result
 
 
-# Selectores web
+# WEB ELEMENT SELECTORS
 LOGIN_USERNAME_FIELD = "#usua_logeo"
 LOGIN_PASSWORD_FIELD = "#password"
 LOGIN_SUBMIT_BUTTON = 'input[type="submit"][value="Ingresar"]'
