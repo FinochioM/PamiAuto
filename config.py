@@ -3,9 +3,10 @@ from dateutil.relativedelta import relativedelta
 import time
 import random
 
+# Variables de ventana de configuracion
 LOGIN_URL = "https://cup.pami.org.ar/controllers/loginController.php"
-BROWSER_TIMEOUT = 30000 # migrated to settings
-HEADLESS = False # true para ejecutar en prod.
+BROWSER_TIMEOUT = 30000
+HEADLESS = False
 SCREENSHOT_DIR = "screenshots"
 DOWNLOADS_DIR = "downloads"
 ERROR_INDICATORS = [
@@ -22,6 +23,7 @@ SERVICE_ACCOUNT_FILE = "credenciales_bio_sheets.json"
 DATE_RANGE_START = datetime(2025, 8, 1, 7, 24) 
 DATE_RANGE_END = datetime(2025, 8, 1, 7, 25)
 
+# Funciones de utilidad
 def get_first_day_of_month():
     today = date.today()
     first_day_current_month = today.replace(day=1)
@@ -66,3 +68,40 @@ def column_number_to_letter(col_num):
         result = chr(65 + col_num % 26) + result
         col_num //= 26
     return result
+
+
+# Selectores web
+LOGIN_USERNAME_FIELD = "#usua_logeo"
+LOGIN_PASSWORD_FIELD = "#password"
+LOGIN_SUBMIT_BUTTON = 'input[type="submit"][value="Ingresar"]'
+
+OME_BUTTON = "#cup_ome"
+PANEL_PRESTACIONES_LINK = "a[href='transmision.php']"
+
+AFILIADO_DROPDOWN = "select[name='tipo_afiliado']"
+AFILIADO_DROPDOWN_VALUE = "2"
+FECHA_TURNO_FIELD = "input[name='f_turno_desde']"
+AFILIADO_NUMBER_FIELD = "input[name='n_afiliado']"
+SEARCH_BUTTON = "input[name='buscar']"
+
+RESULTS_TABLE = "table.bandeja-transmision"
+TABLE_ROWS = "tbody#ordenes tr"
+
+VALIDATION_BUTTON = ".boton-historial.fas.fa-check"
+UPLOAD_BUTTON = ".boton-historial.fas.fa-upload"
+TRANSMIT_BUTTON = ".boton-historial.fas.fa-arrow-right.transmitir"
+
+BTN_SUCCESS_CLASS = "btn-success"
+BTN_PRIMARY_CLASS = "btn-primary"
+
+MODAL_DOCTYPE_DROPDOWN = "select[name='m_t_doc']"
+MODAL_FILE_INPUT = "input[name='m_doc']"
+MODAL_CONFIRMATION_ROWS = "tbody#documentosGrid tr"
+MODAL_CLOSE_BUTTON = "button.btn-danger[data-dismiss='modal']"
+
+TRANSMIT_CONFIRM_BUTTON = "button#transmitir-prestacion-validada"
+
+INFORME_OPTION_TEXT = "Informe/Resultados"
+CLOSE_BUTTON_TEXT = "Cerrar"
+CONFIRM_BUTTON_TEXT = "Confirmar"
+TRANSMISSION_SUCCESS_TEXT = "INFORMACIÓN TRANSMITIDA"

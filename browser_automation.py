@@ -125,17 +125,17 @@ class BrowserAutomation:
 
     def fill_login_form(self, username, password):
         self.log("info", "Esperando que aparezca el campo de usuario")
-        self.page.wait_for_selector("#usua_logeo", state="visible")
+        self.page.wait_for_selector(LOGIN_USERNAME_FIELD, state="visible")
         time.sleep(1)
 
         self.log("info", "Completando campo de usuario")
-        self.page.fill("#usua_logeo", username)
+        self.page.fill(LOGIN_USERNAME_FIELD, username)
 
         self.log("info", "Completando campo de contraseña")
-        self.page.fill("#password", password)
+        self.page.fill(LOGIN_PASSWORD_FIELD, password)
 
         self.log("info", "Haciendo clic en botón Ingresar")
-        self.page.click('input[type="submit"][value="Ingresar"]')
+        self.page.click(LOGIN_SUBMIT_BUTTON)
 
         self.log("info", "Formulario de login completado, esperando...")
         time.sleep(3)
@@ -143,7 +143,7 @@ class BrowserAutomation:
         self.check_for_errors(self.page)
         
         try:
-            self.page.wait_for_selector("#cup_ome", state="visible", timeout=5000)
+            self.page.wait_for_selector(OME_BUTTON, state="visible", timeout=5000)
             self.log("info", "Login exitoso: Botón OME encontrado")
         except:
             screenshot_path = self.take_screenshot("login_timeout")
@@ -152,12 +152,12 @@ class BrowserAutomation:
 
     def click_ome_button(self):
         self.log("info", "Esperando que aparezca el botón OME")
-        self.page.wait_for_selector("#cup_ome", state="visible")
+        self.page.wait_for_selector(OME_BUTTON, state="visible")
         time.sleep(1)
 
         self.log("info", "Haciendo clic en botón OME")
         with self.page.context.expect_page() as new_page_info:
-            self.page.click("#cup_ome")
+            self.page.click(OME_BUTTON)
 
         self.new_page = new_page_info.value
         
@@ -171,11 +171,11 @@ class BrowserAutomation:
     def click_panel_prestaciones(self):
         self.log("info", "Esperando que aparezca el botón Panel de prestaciones")
         try:
-            self.new_page.wait_for_selector("a[href='transmision.php']", state="visible")
+            self.new_page.wait_for_selector(PANEL_PRESTACIONES_LINK, state="visible")
             time.sleep(1)
 
             self.log("info", "Haciendo clic en Panel de prestaciones")
-            self.new_page.click("a[href='transmision.php']")
+            self.new_page.click(PANEL_PRESTACIONES_LINK)
             
             delay = random_delay_medium()
             self.log("info", f"Esperando {delay:.1f} segundos después de cargar panel de prestaciones")
@@ -305,8 +305,8 @@ class BrowserAutomation:
             try:
                 # seleccionar Nro. Documento del dropdown
                 self.log("info", f"NDO {ndo}: Seleccionando 'Nro. Documento' en dropdown 'Afiliado Por'")
-                self.new_page.wait_for_selector("select[name='tipo_afiliado']", state="visible")
-                self.new_page.select_option("select[name='tipo_afiliado']", value="2")
+                self.new_page.wait_for_selector(AFILIADO_DROPDOWN, state="visible")
+                self.new_page.select_option(AFILIADO_DROPDOWN, value=AFILIADO_DROPDOWN_VALUE)
                 self.log("info", f"NDO {ndo}: Selección completada")
                 
                 delay = random_delay_micro()
@@ -315,19 +315,19 @@ class BrowserAutomation:
                 # ingresar primer dia del mes anterior en el campo 'Fecha turno desde'
                 date_value = get_first_day_of_month()
                 self.log("info", f"NDO {ndo}: Ingresando fecha {date_value}")
-                self.new_page.wait_for_selector("input[name='f_turno_desde']", state="visible")
-                self.new_page.click("input[name='f_turno_desde']")  # Foco
-                self.new_page.fill("input[name='f_turno_desde']", "")  # Limpiar
-                self.new_page.type("input[name='f_turno_desde']", date_value, delay=100)
-                self.new_page.press("input[name='f_turno_desde']", "Enter")
+                self.new_page.wait_for_selector(FECHA_TURNO_FIELD, state="visible")
+                self.new_page.click(FECHA_TURNO_FIELD)  # Foco
+                self.new_page.fill(FECHA_TURNO_FIELD, "")  # Limpiar
+                self.new_page.type(FECHA_TURNO_FIELD, date_value, delay=100)
+                self.new_page.press(FECHA_TURNO_FIELD, "Enter")
                 self.log("info", f"NDO {ndo}: Fecha tipeada y confirmada correctamente")
 
                 delay = random_delay_short()
                 self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos entre fecha y NDO")
 
                 self.log("info", f"NDO {ndo}: Ingresando NDO en campo de afiliado")
-                self.new_page.wait_for_selector("input[name='n_afiliado']", state="visible")
-                self.new_page.fill("input[name='n_afiliado']", str(ndo))
+                self.new_page.wait_for_selector(AFILIADO_NUMBER_FIELD, state="visible")
+                self.new_page.fill(AFILIADO_NUMBER_FIELD, str(ndo))
                 self.log("info", f"NDO {ndo}: NDO ingresado correctamente")
                 
                 delay = random_delay_micro()
@@ -335,8 +335,8 @@ class BrowserAutomation:
 
                 # apretar en el botón Buscar
                 self.log("info", f"NDO {ndo}: Haciendo clic en botón Buscar")
-                self.new_page.wait_for_selector("input[name='buscar']", state="visible")
-                self.new_page.click("input[name='buscar']")
+                self.new_page.wait_for_selector(SEARCH_BUTTON, state="visible")
+                self.new_page.click(SEARCH_BUTTON)
                 self.log("info", f"NDO {ndo}: Búsqueda iniciada correctamente")
                 
                 delay = random_delay_short()
@@ -574,12 +574,12 @@ class BrowserAutomation:
     def extract_table_data(self, ndo):
         try:
             self.log("info", f"NDO {ndo}: Esperando que aparezca la tabla de resultados.")
-            self.new_page.wait_for_selector("table.bandeja-transmision", state="visible", timeout=10000)
+            self.new_page.wait_for_selector(RESULTS_TABLE, state="visible", timeout=10000)
             
             delay = random_delay_micro()
             self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos para estabilización de tabla")
         
-            rows = self.new_page.query_selector_all("tbody#ordenes tr")
+            rows = self.new_page.query_selector_all(TABLE_ROWS)
 
             if not rows:
                 self.log("warning", f"NDO {ndo}: No se encontraron resultados en la tabla.")
@@ -633,9 +633,9 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de verificar botón")
             
             data_id = matching_row_data.get('data_id')
-            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            row_selector = f"{TABLE_ROWS}[data-id='{data_id}']"
             
-            button_selector = f"{row_selector} .boton-historial.fas.fa-check"
+            button_selector = f"{row_selector} {VALIDATION_BUTTON}"
 
             try:
                 self.new_page.wait_for_selector(button_selector, state="visible", timeout=5000)
@@ -647,10 +647,10 @@ class BrowserAutomation:
                 
                 classes = button.get_attribute("class")
                 
-                if "btn-success" in classes:
+                if BTN_SUCCESS_CLASS in classes:
                     self.log("info", f"NDO {ndo}: Botón verde - Validación manual no realizada")
                     return "processed", None
-                elif "btn-primary" in classes:
+                elif BTN_PRIMARY_CLASS in classes:
                     self.log("info", f"NDO {ndo}: Botón azul - Requiere carga de archivo")
                     return "needs_upload", None
                 else:
@@ -671,9 +671,9 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Verificando estado del botón de carga")
             
             data_id = matching_row_data.get('data_id')
-            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            row_selector = f"{TABLE_ROWS}[data-id='{data_id}']"
             
-            upload_button_selector = f"{row_selector} .boton-historial.fas.fa-upload"
+            upload_button_selector = f"{row_selector} {UPLOAD_BUTTON}"
 
             self.new_page.wait_for_selector(upload_button_selector, state="visible", timeout=5000)
             
@@ -685,10 +685,10 @@ class BrowserAutomation:
             
             classes = upload_button.get_attribute("class")
             
-            if "btn-success" in classes:
+            if BTN_SUCCESS_CLASS in classes:
                 self.log("info", f"NDO {ndo}: Botón de carga verde - Requiere subir archivo.")
                 return "needs_file_upload", None
-            elif "btn-primary" in classes:
+            elif BTN_PRIMARY_CLASS in classes:
                 self.log("info", f"NDO {ndo}: Botón de carga azul - Archivo ya subido.")
                 return "file_already_uploaded", None
             else:
@@ -714,21 +714,21 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Haciendo clic en botón de carga")
             
             data_id = matching_row_data.get('data_id')
-            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
-            upload_button_selector = f"{row_selector} .boton-historial.fas.fa-upload"
+            row_selector = f"{TABLE_ROWS}[data-id='{data_id}']"
+            upload_button_selector = f"{row_selector} {UPLOAD_BUTTON}"
             
             self.new_page.click(upload_button_selector)
             self.log("info", f"NDO {ndo}: Botón de carga presionado")
             
             self.log("info", f"NDO {ndo}: Esperando que aparezca el modal de carga")
-            self.new_page.wait_for_selector("select[name='m_t_doc']", state="visible", timeout=10000)
+            self.new_page.wait_for_selector(MODAL_DOCTYPE_DROPDOWN, state="visible", timeout=10000)
             
             delay = random_delay_short()
             self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos para que cargue el modal")
             
             self.log("info", f"NDO {ndo}: Modal de carga detectado, obteniendo opciones del dropdown")
             
-            options = self.new_page.query_selector_all("select[name='m_t_doc'] option")
+            options = self.new_page.query_selector_all("{MODAL_DOCTYPE_DROPDOWN} option")
             
             if not options:
                 self.log("error", f"NDO {ndo}: No se encontraron opciones en el dropdown")
@@ -743,7 +743,7 @@ class BrowserAutomation:
                 option_value = option.get_attribute("value")
                 self.log("info", f"NDO {ndo}: Opción encontrada - Texto: '{option_text}', Valor: '{option_value}'")
                 
-                if "Informe/Resultados" in option_text:
+                if INFORME_OPTION_TEXT in option_text:
                     informe_option_value = option_value
                     self.log("info", f"NDO {ndo}: Opción 'Informe/Resultados' encontrada con valor: '{option_value}'")
                     break
@@ -754,18 +754,18 @@ class BrowserAutomation:
                 return False, screenshot_path
             
             self.log("info", f"NDO {ndo}: Seleccionando opción con valor: '{informe_option_value}'")
-            self.new_page.select_option("select[name='m_t_doc']", value=informe_option_value)
+            self.new_page.select_option(MODAL_DOCTYPE_DROPDOWN, value=informe_option_value)
             self.log("info", f"NDO {ndo}: Opción 'Informe/Resultados' seleccionada")
             
             self.log("info", f"NDO {ndo}: Esperando que aparezca el campo de archivo")
-            self.new_page.wait_for_selector("input[name='m_doc']", state="visible", timeout=10000)
+            self.new_page.wait_for_selector(MODAL_FILE_INPUT, state="visible", timeout=10000)
             time.sleep(2)
             
             self.log("info", f"NDO {ndo}: Preparando carga del archivo descargado: {downloaded_file_path}")
             
             with self.new_page.expect_file_chooser() as fc_info:
                 self.log("info", f"NDO {ndo}: Haciendo clic en campo de archivo")
-                self.new_page.click("input[name='m_doc']")
+                self.new_page.click(MODAL_FILE_INPUT)
             
             file_chooser = fc_info.value
             self.log("info", f"NDO {ndo}: Seleccionando archivo en el diálogo")
@@ -777,15 +777,15 @@ class BrowserAutomation:
             
             self.log("info", f"NDO {ndo}: Esperando confirmación de carga de archivo")
             try:
-                self.new_page.wait_for_selector("tbody#documentosGrid tr", state="visible", timeout=15000)
+                self.new_page.wait_for_selector(MODAL_CONFIRMATION_ROWS, state="visible", timeout=15000)
                 
-                confirmation_rows = self.new_page.query_selector_all("tbody#documentosGrid tr")
+                confirmation_rows = self.new_page.query_selector_all(MODAL_CONFIRMATION_ROWS)
                 if confirmation_rows and len(confirmation_rows) > 0:
                     first_row = confirmation_rows[0]
                     row_content = first_row.inner_text()
                     self.log("info", f"NDO {ndo}: Confirmación de carga encontrada: {row_content}")
                     
-                    if "Informe/Resultados" in row_content:
+                    if INFORME_OPTION_TEXT in row_content:
                         self.log("info", f"NDO {ndo}: Archivo subido y confirmado exitosamente")
                     else:
                         self.log("warning", f"NDO {ndo}: Confirmación no contiene 'Informe/Resultados'")
@@ -801,12 +801,12 @@ class BrowserAutomation:
             
             self.log("info", f"NDO {ndo}: Cerrando modal")
             try:
-                close_buttons = self.new_page.query_selector_all("button.btn-danger[data-dismiss='modal']")
+                close_buttons = self.new_page.query_selector_all(MODAL_CLOSE_BUTTON)
                 
                 close_button_found = False
                 for button in close_buttons:
                     button_text = button.inner_text().strip()
-                    if "Cerrar" in button_text:
+                    if CLOSE_BUTTON_TEXT in button_text:
                         button.click()
                         self.log("info", f"NDO {ndo}: Modal cerrado exitosamente con botón 'Cerrar'")
                         close_button_found = True
@@ -863,11 +863,11 @@ class BrowserAutomation:
             self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de verificar transmisión")
             
             data_id = matching_row_data.get('data_id')
-            row_selector = f"tbody#ordenes tr[data-id='{data_id}']"
+            row_selector = f"{TABLE_ROWS}[data-id='{data_id}']"
             
             time.sleep(3)
             
-            check_button_selector = f"{row_selector} .boton-historial.fas.fa-check"
+            check_button_selector = f"{row_selector} {VALIDATION_BUTTON}"
             check_button = self.new_page.query_selector(check_button_selector)
             
             if not check_button:
@@ -875,9 +875,9 @@ class BrowserAutomation:
                 return False, None
             
             check_classes = check_button.get_attribute("class")
-            check_is_blue = "btn-primary" in check_classes
+            check_is_blue = BTN_PRIMARY_CLASS in check_classes
             
-            upload_button_selector = f"{row_selector} .boton-historial.fas.fa-upload"
+            upload_button_selector = f"{row_selector} {UPLOAD_BUTTON}"
             upload_button = self.new_page.query_selector(upload_button_selector)
             
             if not upload_button:
@@ -885,7 +885,7 @@ class BrowserAutomation:
                 return False, None
             
             upload_classes = upload_button.get_attribute("class")
-            upload_is_blue = "btn-primary" in upload_classes
+            upload_is_blue = BTN_PRIMARY_CLASS in upload_classes
             
             self.log("info", f"NDO {ndo}: Estado botones - Validación: {'azul' if check_is_blue else 'otro'}, Carga: {'azul' if upload_is_blue else 'otro'}")
             
@@ -895,7 +895,7 @@ class BrowserAutomation:
                 delay = random_delay_short()
                 self.log("info", f"NDO {ndo}: Esperando {delay:.1f} segundos antes de transmitir")
            
-                transmit_button_selector = f"{row_selector} .boton-historial.fas.fa-arrow-right.transmitir"
+                transmit_button_selector = f"{row_selector} {TRANSMIT_BUTTON}"
                 
                 self.new_page.wait_for_selector(transmit_button_selector, state="visible", timeout=5000)
                 self.new_page.click(transmit_button_selector)
@@ -904,14 +904,14 @@ class BrowserAutomation:
                 
                 self.log("info", f"NDO {ndo}: Esperando botón 'Confirmar'")
 
-                self.new_page.wait_for_selector("button#transmitir-prestacion-validada", state="visible", timeout=10000)
+                self.new_page.wait_for_selector(TRANSMIT_CONFIRM_BUTTON, state="visible", timeout=10000)
 
-                confirm_buttons = self.new_page.query_selector_all("button#transmitir-prestacion-validada.btn.btn-success")
+                confirm_buttons = self.new_page.query_selector_all("{TRANSMIT_CONFIRM_BUTTON}.btn.btn-success")
 
                 confirm_button = None
                 for button in confirm_buttons:
                     button_text = button.inner_text().strip()
-                    if "Confirmar" in button_text:
+                    if CONFIRM_BUTTON_TEXT in button_text:
                         confirm_button = button
                         self.log("info", f"NDO {ndo}: Botón 'Confirmar' encontrado con texto: '{button_text}'")
                         break
@@ -932,7 +932,7 @@ class BrowserAutomation:
                     
                     dialog.accept()
 
-                    if "INFORMACIÓN TRANSMITIDA" in dialog_message:
+                    if TRANSMISSION_SUCCESS_TEXT in dialog_message:
                         self.log("info", f"NDO {ndo}: Diálogo de confirmación aceptado - Transmisión completada")
                     else:
                         self.log("warning", f"NDO {ndo}: Mensaje de diálogo inesperado: {dialog_message}")
