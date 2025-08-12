@@ -73,8 +73,7 @@ class MainWindow(QMainWindow):
     
     def setup_connections(self):
         self.startAutomation.clicked.connect(self.start_automation_thread)
-        
-        # agregar despues
+        self.stopAutomation.clicked.connect(self.stop_automation)
         self.logsButton.clicked.connect(self.show_logs)
         self.settingsButton.clicked.connect(self.show_settings)
     
@@ -100,6 +99,8 @@ class MainWindow(QMainWindow):
         
         self.startAutomation.setEnabled(False)
         self.startAutomation.setText("Ejecutando...")
+        self.stopAutomation.setEnabled(True)
+        self.stopAutomation.setText("Detener")
         
         thread = threading.Thread(target=self.run_automation, args=(username, password))
         thread.daemon = True
@@ -154,6 +155,13 @@ class MainWindow(QMainWindow):
                 self.automation.close_browser()
             self.worker_signals.automation_finished.emit()
     
+    def stop_automation(self):
+        if self.automation and hasattr(self.automation, 'request_stop'):
+            self.automation.request_stop()
+            self.stopAutomation.setEnabled(False)
+            self.stopAutomation.setText("Deteniendo...")
+            self.worker_signals.status_update.emit("Deteniendo despues del caso actual...", "orange")
+    
     def update_status(self, message, color):
         print(f"Status: {message} (Color: {color})")
     
@@ -163,6 +171,8 @@ class MainWindow(QMainWindow):
     def automation_completed(self):
         self.startAutomation.setEnabled(True)
         self.startAutomation.setText("Iniciar Automatización")
+        self.stopAutomation.setEnabled(False)
+        self.stopAutomation.setText("Detener")
         
         processed_rows = getattr(self.automation, 'processed_rows', [])
         failed_rows = getattr(self.automation, 'failed_rows', [])

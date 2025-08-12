@@ -23,6 +23,12 @@ class BrowserAutomation:
         self.failed_rows = []
         self.already_processed_cases = []
         self.original_indices = []
+        self.stop_requested = False
+        
+    def request_stop(self):
+        """Request graceful stop after current case"""
+        self.stop_requested = True
+        self.log("info", "Solicitud de parada recibida - Terminando con caso actual...")
 
     def log(self, level, message, screenshot_path=None):
         if self.logger:
@@ -294,9 +300,17 @@ class BrowserAutomation:
         failed_rows = []
 
         for index, row in enumerate(excel_data):
+            if self.stop_requested:
+                self.log("info", f"Parada solicitada - Procesamiento detenido en caso {index + 1}")
+                break
+            
             if index > 0:
                 delay = random_delay_long()
                 self.log("info", f"Esperando {delay:.1f} segundos antes del siguiente caso")
+                
+                if self.stop_requested:
+                    self.log("info", "Parada solicitada durante espera - Deteniendo procesamiento")
+                    break
                 
             ndo = row.get('NDO', f'Fila_{index + 1}')
             cod_excel = row.get('CODIGO_PAMI', '')
@@ -568,8 +582,14 @@ class BrowserAutomation:
 
         self.processed_rows = processed_rows
         self.failed_rows = failed_rows
+        
+        total_processed = len(processed_rows)
+        total_failed = len(failed_rows)
 
-        self.log("info", f"Procesamiento completado. Exitosos: {len(processed_rows)}, Fallidos: {len(failed_rows)}")
+        if self.stop_requested:
+            self.log("info", f"Procesamiento detenido por usuario. Casos completados: {total_processed}, Fallidos: {total_failed}")
+        else:
+            self.log("info", f"Procesamiento completado. Exitosos: {total_processed}, Fallidos: {total_failed}")
 
     def extract_table_data(self, ndo):
         try:
