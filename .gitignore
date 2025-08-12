@@ -8,3 +8,5 @@ downloads/
 build/
 dist/
 dist.rar
+*.rar
+PAMI_AUTOMATION/
