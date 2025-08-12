@@ -748,7 +748,7 @@ class BrowserAutomation:
             
             self.log("info", f"NDO {ndo}: Modal de carga detectado, obteniendo opciones del dropdown")
             
-            options = self.new_page.query_selector_all("{MODAL_DOCTYPE_DROPDOWN} option")
+            options = self.new_page.query_selector_all(f"{MODAL_DOCTYPE_DROPDOWN} option")
             
             if not options:
                 self.log("error", f"NDO {ndo}: No se encontraron opciones en el dropdown")
@@ -926,7 +926,7 @@ class BrowserAutomation:
 
                 self.new_page.wait_for_selector(TRANSMIT_CONFIRM_BUTTON, state="visible", timeout=10000)
 
-                confirm_buttons = self.new_page.query_selector_all("{TRANSMIT_CONFIRM_BUTTON}.btn.btn-success")
+                confirm_buttons = self.new_page.query_selector_all(f"{TRANSMIT_CONFIRM_BUTTON}.btn.btn-success")
 
                 confirm_button = None
                 for button in confirm_buttons:
